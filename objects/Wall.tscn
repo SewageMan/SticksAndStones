@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3 uid="uid://dncfbuh5avf5f"]
+
+[ext_resource type="Texture2D" uid="uid://e1hq8jp6yua2" path="res://Sprites/Entities/Probe/probe.png" id="1_wcvvu"]
+
+[sub_resource type="RectangleShape2D" id="1"]
+size = Vector2(100, 100)
+
+[node name="Wall" type="StaticBody2D"]
+z_index = 2
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+z_index = 2
+position = Vector2(4, -99)
+scale = Vector2(1.427, 1.5)
+texture = ExtResource("1_wcvvu")
+
+[node name="Collision" type="CollisionShape2D" parent="."]
+shape = SubResource("1")

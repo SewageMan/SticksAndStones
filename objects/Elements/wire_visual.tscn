@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://kdamk3faedma"]
+
+[ext_resource type="Script" path="res://objects/Elements/wire_visual.gd" id="1_43hhi"]
+
+[node name="wire_visual" type="Line2D"]
+width = 4.0
+default_color = Color(0, 0, 0, 1)
+script = ExtResource("1_43hhi")

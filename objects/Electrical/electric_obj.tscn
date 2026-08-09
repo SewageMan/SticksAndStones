@@ -1,0 +1,52 @@
+[gd_scene load_steps=7 format=3 uid="uid://cpoccmeuc58nk"]
+
+[ext_resource type="Script" path="res://objects/Electrical/electric_obj.gd" id="1_6g4wm"]
+[ext_resource type="Texture2D" uid="uid://cwdp703mtdied" path="res://loser-city-enjoyer-v0-mph9c839dstd1.webp" id="2_efy38"]
+[ext_resource type="Script" path="res://objects/Electrical/connection.gd" id="3_rxy6a"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1in3a"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_i1ibe"]
+size = Vector2(6, 6)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_y0h4h"]
+size = Vector2(14, 14)
+
+[node name="electric_obj" type="StaticBody2D"]
+script = ExtResource("1_6g4wm")
+
+[node name="main_body" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_1in3a")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+visible = false
+position = Vector2(3.8147e-06, -3.8147e-06)
+scale = Vector2(0.03125, 0.0324675)
+texture = ExtResource("2_efy38")
+
+[node name="connection" type="Area2D" parent="."]
+z_as_relative = false
+collision_layer = 3
+script = ExtResource("3_rxy6a")
+
+[node name="collision_right" type="CollisionShape2D" parent="connection"]
+position = Vector2(14, 0)
+shape = SubResource("RectangleShape2D_i1ibe")
+
+[node name="collision_left" type="CollisionShape2D" parent="connection"]
+position = Vector2(-14, 0)
+shape = SubResource("RectangleShape2D_i1ibe")
+
+[node name="collision_top" type="CollisionShape2D" parent="connection"]
+position = Vector2(0, -14)
+shape = SubResource("RectangleShape2D_i1ibe")
+
+[node name="collision_bottom" type="CollisionShape2D" parent="connection"]
+position = Vector2(0, 14)
+shape = SubResource("RectangleShape2D_i1ibe")
+
+[node name="collision_centre" type="CollisionShape2D" parent="connection"]
+shape = SubResource("RectangleShape2D_y0h4h")
+
+[connection signal="area_entered" from="connection" to="." method="_on_connection_area_entered"]
+[connection signal="area_exited" from="connection" to="." method="_on_connection_area_exited"]

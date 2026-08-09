@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="InvItem" load_steps=3 format=3 uid="uid://dot8ek5mvdt4t"]
+
+[ext_resource type="Script" path="res://Scripts/ui_element stuff/inventory_item.gd" id="1_41l4q"]
+[ext_resource type="Texture2D" uid="uid://b52r2gg18q7ph" path="res://Sprites/Entities/Storage/chest_inventory.png" id="2_honr2"]
+
+[resource]
+script = ExtResource("1_41l4q")
+name = "Chest"
+texture = ExtResource("2_honr2")
+attributes = Array[String](["placeable", "burnable", "hasinventory", "block"])
+defValues = {
+"burntime": 40.0
+}
+amount = 1

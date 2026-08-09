@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="Netlist" load_steps=3 format=3 uid="uid://dbpl8do3vm4p1"]
+
+[ext_resource type="Script" path="res://branch.gd" id="1_iycfc"]
+[ext_resource type="Script" path="res://objects/Electrical/netlist.gd" id="2_v7nyc"]
+
+[resource]
+script = ExtResource("2_v7nyc")
+letlist = Array[ExtResource("1_iycfc")]([])
+info = {}
+maxnodeIndex = 0

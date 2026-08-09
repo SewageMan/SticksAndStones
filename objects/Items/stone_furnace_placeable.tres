@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="InvItem" load_steps=3 format=3 uid="uid://c02jfqppdn6jq"]
+
+[ext_resource type="Script" path="res://Scripts/ui_element stuff/inventory_item.gd" id="1_vfsj2"]
+[ext_resource type="Texture2D" uid="uid://d20em4ob34x70" path="res://Sprites/Entities/Storage/furnace_inventory.png" id="2_ybdsd"]
+
+[resource]
+script = ExtResource("1_vfsj2")
+name = "Stone Furnace"
+texture = ExtResource("2_ybdsd")
+attributes = Array[String](["placeable", "hasinventory", "block", "heat"])
+defValues = {
+"convCoeff": 0.5,
+"generatedEnergy": 340.0,
+"heatTransCoeff": 0.5,
+"resistance": 1e+07,
+"thermalMass": 1000.0
+}
+amount = 1

@@ -1,0 +1,16 @@
+[gd_scene load_steps=3 format=3 uid="uid://dvaet1ljv7ye4"]
+
+[ext_resource type="Script" path="res://objects/camera_2d.gd" id="1_l5bwi"]
+[ext_resource type="PackedScene" uid="uid://cavxa40aajmkf" path="res://MenuStuff/UI/overworld_ui.tscn" id="2_r04ku"]
+
+[node name="Viewport" type="Node2D"]
+script = ExtResource("1_l5bwi")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+
+[node name="Overworld_UI" parent="." instance=ExtResource("2_r04ku")]
+z_index = 12
+offset_left = -164.0
+offset_top = 254.0
+offset_right = 567.0
+offset_bottom = 348.0
