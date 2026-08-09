@@ -35,12 +35,9 @@ func _ready():
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
 	var playerPos = Global.player.global_position
-	current_chunk = floor(playerPos/chunk_size)
+	current_chunk = round(playerPos/chunk_size)
 	if previous_chunk != current_chunk:
-		if !chunk_loaded:
-			load_chunk()
-		else:
-			chunk_loaded = false
+		load_chunk()
 		previous_chunk = current_chunk
 
 func _get_player_chunk(pos):
