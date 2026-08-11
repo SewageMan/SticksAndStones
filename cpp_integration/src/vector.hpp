@@ -411,6 +411,14 @@ namespace engine {
 			return iterator(min_x, max_y + 1, min_x, max_x);
 		}
 	};
+
+	typedef Vector2<int32_t> Vector2i;
+
+	typedef Vector2<uint32_t> Vector2u;
+
+	typedef Vector2<float> Vector2f;
+
+	typedef Vector2<double> Vector2d;
 }
 
 namespace std {

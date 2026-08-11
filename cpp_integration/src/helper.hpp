@@ -26,9 +26,39 @@
 
 namespace engine {
 
+	enum Direction {
+		TOP = 0,
+		RIGHT = 1,
+		BOTTOM = 2,
+		LEFT = 3
+	};
+
+	template<typename T, int rows, int collums>
+	using Matrix2D = std::array<std::array<T, rows>, collums>;
+
+	typedef uint32_t RefCounter;
+
+	typedef double Seconds;
+
+	typedef int32_t pos_t;
+	typedef Vector2<pos_t> Vector2p;
+
+	constexpr pos_t block_size = 50;
+	constexpr pos_t chunk_size_blocks = 10;
+	constexpr pos_t chunk_size_units = chunk_size_blocks * block_size;
+
+	template<typename T>
+	using ChunkMatrix = Matrix2D<T,chunk_size_blocks,chunk_size_blocks>;  // ChunkMatrix[x][y] is correct indexing order
+
 	template <typename T>
 	std::string to_string_ptr(T* pointer) {
 		return std::format("{:p}", static_cast<const void*>(pointer));
+	}
+
+	template <typename T>
+	bool can_find_in_vec(std::vector<T>& vector,T value) {
+		auto found = std::find(vector.begin(), vector.end(), value);
+		return found != vector.end();
 	}
 
 	template<typename... T>
