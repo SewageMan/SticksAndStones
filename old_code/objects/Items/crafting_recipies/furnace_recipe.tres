@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="Recipe" load_steps=5 format=3 uid="uid://b4kv3k0tjvlgs"]
+
+[ext_resource type="Script" path="res://old_code/Scripts/ui_element stuff/inventory_item.gd" id="1_xpj61"]
+[ext_resource type="Resource" uid="uid://dhb55b6pn8heg" path="res://old_code/objects/Items/Stone_collectable.tres" id="2_2tcu1"]
+[ext_resource type="Resource" uid="uid://c02jfqppdn6jq" path="res://old_code/objects/Items/stone_furnace_placeable.tres" id="3_yc73i"]
+[ext_resource type="Script" path="res://old_code/Scripts/ui_element stuff/Crafting_recipes.gd" id="4_xfc5o"]
+
+[resource]
+script = ExtResource("4_xfc5o")
+Items = Array[ExtResource("1_xpj61")]([ExtResource("2_2tcu1")])
+amount = Array[int]([8])
+resultItem = ExtResource("3_yc73i")
+resultAmount = 1

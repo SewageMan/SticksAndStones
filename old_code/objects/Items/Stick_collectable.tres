@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="InvItem" load_steps=3 format=3 uid="uid://bfp1ylv1acum8"]
+
+[ext_resource type="Script" path="res://old_code/Scripts/ui_element stuff/inventory_item.gd" id="1_gjfu1"]
+[ext_resource type="Texture2D" uid="uid://bhsk1kfov45r" path="res://Sprites/Items/sticks.png" id="2_flfm1"]
+
+[resource]
+script = ExtResource("1_gjfu1")
+name = "Stick"
+texture = ExtResource("2_flfm1")
+attributes = Array[String](["burnable"])
+defValues = {
+"burntime": 5.0
+}
+amount = 1

@@ -1,0 +1,137 @@
+[gd_scene load_steps=6 format=3 uid="uid://bwjauix2ot3kf"]
+
+[ext_resource type="Script" path="res://old_code/objects/Elements/element.gd" id="1_hfuch"]
+[ext_resource type="Texture2D" uid="uid://doxpf8r4ykcy6" path="res://Sprites/Menu/Elements/CurrentSource.png" id="2_w6di1"]
+[ext_resource type="Script" path="res://old_code/objects/Elements/input_holder.gd" id="3_t73a0"]
+[ext_resource type="Script" path="res://old_code/objects/Elements/output_holder.gd" id="4_nu1l4"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_e30ga"]
+size = Vector2(64, 64)
+
+[node name="Element" type="Node2D"]
+script = ExtResource("1_hfuch")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("2_w6di1")
+
+[node name="Resistorpos" type="Node2D" parent="Sprite2D"]
+visible = false
+
+[node name="InputHandler" type="Node2D" parent="Sprite2D/Resistorpos"]
+position = Vector2(-32, 0)
+
+[node name="OutputHandler" type="Node2D" parent="Sprite2D/Resistorpos"]
+position = Vector2(31, 0)
+
+[node name="InfoHandler" type="Node2D" parent="Sprite2D/Resistorpos"]
+position = Vector2(-7, -38)
+
+[node name="DCSourcepos" type="Node2D" parent="Sprite2D"]
+visible = false
+
+[node name="InputHandler" type="Node2D" parent="Sprite2D/DCSourcepos"]
+position = Vector2(-1, 26)
+
+[node name="OutputHandler" type="Node2D" parent="Sprite2D/DCSourcepos"]
+position = Vector2(-1, -24)
+
+[node name="InfoHandler" type="Node2D" parent="Sprite2D/DCSourcepos"]
+position = Vector2(37, -16)
+
+[node name="CurrentSourcepos" type="Node2D" parent="Sprite2D"]
+visible = false
+
+[node name="InputHandler" type="Node2D" parent="Sprite2D/CurrentSourcepos"]
+position = Vector2(-1, 26)
+
+[node name="OutputHandler" type="Node2D" parent="Sprite2D/CurrentSourcepos"]
+position = Vector2(-1, -24)
+
+[node name="InfoHandler" type="Node2D" parent="Sprite2D/CurrentSourcepos"]
+position = Vector2(37, -16)
+
+[node name="Groundpos" type="Node2D" parent="Sprite2D"]
+visible = false
+
+[node name="InputHandler" type="Node2D" parent="Sprite2D/Groundpos"]
+position = Vector2(0, -24)
+
+[node name="InfoHandler" type="Node2D" parent="Sprite2D/Groundpos"]
+position = Vector2(37, -16)
+
+[node name="Inputelpos" type="Node2D" parent="Sprite2D"]
+visible = false
+
+[node name="InputHandler" type="Node2D" parent="Sprite2D/Inputelpos"]
+position = Vector2(0, 8)
+
+[node name="InfoHandler" type="Node2D" parent="Sprite2D/Inputelpos"]
+position = Vector2(23, 8)
+
+[node name="Outputelpos" type="Node2D" parent="Sprite2D"]
+visible = false
+
+[node name="InputHandler" type="Node2D" parent="Sprite2D/Outputelpos"]
+position = Vector2(0, 8)
+
+[node name="InfoHandler" type="Node2D" parent="Sprite2D/Outputelpos"]
+position = Vector2(23, 8)
+
+[node name="Diodepos" type="Node2D" parent="Sprite2D"]
+visible = false
+
+[node name="InputHandler" type="Node2D" parent="Sprite2D/Diodepos"]
+position = Vector2(-32, 0)
+
+[node name="OutputHandler" type="Node2D" parent="Sprite2D/Diodepos"]
+position = Vector2(31, 0)
+
+[node name="InfoHandler" type="Node2D" parent="Sprite2D/Diodepos"]
+position = Vector2(-4, -40)
+
+[node name="Thyristorpos" type="Node2D" parent="Sprite2D"]
+visible = false
+
+[node name="InputHandler_01" type="Node2D" parent="Sprite2D/Thyristorpos"]
+position = Vector2(-31, -7)
+
+[node name="InputHandler_02" type="Node2D" parent="Sprite2D/Thyristorpos"]
+position = Vector2(7, 25)
+
+[node name="OutputHandler" type="Node2D" parent="Sprite2D/Thyristorpos"]
+position = Vector2(29, -7)
+
+[node name="InfoHandler" type="Node2D" parent="Sprite2D/Thyristorpos"]
+position = Vector2(-17, -49)
+
+[node name="InputHolder" type="Node2D" parent="Sprite2D"]
+unique_name_in_owner = true
+script = ExtResource("3_t73a0")
+
+[node name="OutputHolder" type="Node2D" parent="Sprite2D"]
+unique_name_in_owner = true
+script = ExtResource("4_nu1l4")
+
+[node name="Info" type="Control" parent="Sprite2D"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+metadata/_edit_use_anchors_ = true
+
+[node name="Label" type="Label" parent="Sprite2D/Info"]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 3.975
+offset_right = 40.0
+offset_bottom = 23.0
+text = "Ive got 5 fingers in my ass"
+metadata/_edit_use_anchors_ = true
+
+[node name="Area2D" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
+shape = SubResource("RectangleShape2D_e30ga")
+
+[connection signal="input_event" from="Area2D" to="." method="_on_area_2d_input_event"]
+[connection signal="mouse_entered" from="Area2D" to="." method="_on_area_2d_mouse_entered"]

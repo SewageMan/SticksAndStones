@@ -1,0 +1,76 @@
+[gd_scene load_steps=9 format=3 uid="uid://nwe5ihnjdn7j"]
+
+[ext_resource type="Script" path="res://old_code/objects/Entities/inventory_entity.gd" id="1_0p5in"]
+[ext_resource type="Texture2D" uid="uid://dwgs8m8kpvbhi" path="res://Sprites/Entities/Storage/chest.png" id="2_gme03"]
+[ext_resource type="Texture2D" uid="uid://cmkq40uv6vjwl" path="res://Sprites/Entities/Storage/furnace.png" id="3_qyfm8"]
+[ext_resource type="Script" path="res://old_code/objects/Entities/furnace.gd" id="3_vf1r2"]
+[ext_resource type="Texture2D" uid="uid://ds8cwpf1h1u4p" path="res://Sprites/Entities/Storage/kiln.png" id="4_k1mi0"]
+[ext_resource type="Script" path="res://old_code/objects/Entities/kiln.gd" id="5_j6yd8"]
+[ext_resource type="Texture2D" uid="uid://cxra4wwigvak6" path="res://icon.png" id="7_pumbx"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_n7lwj"]
+
+[node name="Inventory_entity" type="Node2D"]
+script = ExtResource("1_0p5in")
+
+[node name="Chest" type="Node2D" parent="."]
+visible = false
+position = Vector2(16, 16)
+
+[node name="Area2D" type="Area2D" parent="Chest"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Chest/Area2D"]
+scale = Vector2(2, 2)
+shape = SubResource("RectangleShape2D_n7lwj")
+
+[node name="Sprite2D" type="Sprite2D" parent="Chest"]
+texture = ExtResource("2_gme03")
+
+[node name="Stone Furnace" type="Node2D" parent="."]
+unique_name_in_owner = true
+visible = false
+position = Vector2(16, 16)
+script = ExtResource("3_vf1r2")
+
+[node name="Area2D" type="Area2D" parent="Stone Furnace"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Stone Furnace/Area2D"]
+scale = Vector2(2, 2)
+shape = SubResource("RectangleShape2D_n7lwj")
+
+[node name="Sprite2D" type="Sprite2D" parent="Stone Furnace"]
+texture = ExtResource("3_qyfm8")
+
+[node name="BurnTimer" type="Timer" parent="Stone Furnace"]
+one_shot = true
+
+[node name="Stone Kiln" type="Node2D" parent="."]
+unique_name_in_owner = true
+visible = false
+position = Vector2(16, 16)
+script = ExtResource("5_j6yd8")
+
+[node name="Area2D" type="Area2D" parent="Stone Kiln"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Stone Kiln/Area2D"]
+scale = Vector2(2, 2)
+shape = SubResource("RectangleShape2D_n7lwj")
+
+[node name="Sprite2D" type="Sprite2D" parent="Stone Kiln"]
+position = Vector2(0, -16)
+texture = ExtResource("4_k1mi0")
+
+[node name="SmeltTimer" type="Timer" parent="Stone Kiln"]
+one_shot = true
+
+[node name="Resistor" type="Node2D" parent="."]
+visible = false
+
+[node name="Sprite2D" type="Sprite2D" parent="Resistor"]
+texture = ExtResource("7_pumbx")
+
+[connection signal="body_entered" from="Chest/Area2D" to="." method="_on_area_2d_body_entered"]
+[connection signal="body_entered" from="Stone Furnace/Area2D" to="." method="_on_area_2d_body_entered"]
+[connection signal="timeout" from="Stone Furnace/BurnTimer" to="Stone Furnace" method="_on_burn_timer_timeout"]
+[connection signal="body_entered" from="Stone Kiln/Area2D" to="." method="_on_area_2d_body_entered"]
+[connection signal="timeout" from="Stone Kiln/SmeltTimer" to="Stone Kiln" method="_on_smelt_timer_timeout"]

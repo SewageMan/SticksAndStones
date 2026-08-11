@@ -1,8 +1,0 @@
-[gd_resource type="Resource" script_class="Stamp" load_steps=2 format=3 uid="uid://bpr34bngjuwmo"]
-
-[ext_resource type="Script" path="res://Scripts/stamp.gd" id="1_c2di5"]
-
-[resource]
-script = ExtResource("1_c2di5")
-shape = [[0.0, 0.0], [0.0, 0.0]]
-name = "Resistor"

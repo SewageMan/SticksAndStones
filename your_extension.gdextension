@@ -1,0 +1,6 @@
+[configuration]
+entry_symbol = "your_library_init"
+compatibility_minimum = 4.3
+
+[libraries]
+windows.debug.x86_64 = "cpp_integration/your_extension.dll"

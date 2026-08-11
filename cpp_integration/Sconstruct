@@ -1,0 +1,33 @@
+import sys
+import os
+
+
+# Настраиваем окружение для поиска godot-cpp
+env = SConscript("godot-cpp/SConstruct")
+
+env.Append(CCFLAGS=['/std:c++latest'])
+
+print("CC =", env.get('CC', 'not set'))
+print("CXX =", env.get('CXX', 'not set'))
+print("CCFLAGS =", env.get('CCFLAGS', 'not set'))
+
+# Имя твоей библиотеки
+module_name = "your_extension" # Замени на своё
+
+# Добавляем путь к исходникам
+env.Append(CPPPATH=["src/"])
+
+# Создаём библиотеку из всех .cpp файлов в src/
+sources = Glob("src/*.cpp")
+
+# Добавляем register_types.cpp отдельно, если он не в src
+sources += ["register_types.cpp"]
+
+library = env.SharedLibrary(
+    target=module_name,
+    source=sources,
+)
+
+# Копируем готовую библиотеку в папку demo/bin проекта Godot (путь может отличаться)
+# Это упростит тестирование
+Default(library)
