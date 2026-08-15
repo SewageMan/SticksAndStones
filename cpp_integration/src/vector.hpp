@@ -360,6 +360,16 @@ namespace engine {
 		return lhs.x != rhs.x or lhs.y != rhs.y;
 	}
 
+	template <typename T, typename U>
+	inline Vector2<T> operator<<(const Vector2<T> vec, U shift_by) {
+		return Vector2<T>(vec.x << shift_by, vec.y << shift_by);
+	}
+
+	template <typename T, typename U>
+	inline Vector2<T> operator>>(const Vector2<T> vec, U shift_by) {
+		return Vector2<T>(vec.x >> shift_by, vec.y >> shift_by);
+	}
+
 	template <typename T>
 	inline std::ostream& operator<<(std::ostream& os, const Vector2<T> vec) {
 		os << vec.to_string();

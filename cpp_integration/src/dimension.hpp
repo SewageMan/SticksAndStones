@@ -3,7 +3,6 @@
 #include <load_zone.hpp>
 
 namespace engine {
-	struct MainEngine;
 
 	struct Dimension {
 		std::string name;
@@ -17,8 +16,13 @@ namespace engine {
 
 		Dimension(std::string name, TileDescriptor* default_ground) : name(name), default_ground(default_ground) {}
 
-		virtual void on_engine_add(MainEngine* main_endine) {
-
+		virtual void perform_process(Seconds delta) {
+			for (Chunk* chunk : process_running_chunks) {
+				chunk->perform_block_process(delta);
+			}
+			for (Chunk* chunk : graphic_running_chunks) {
+				chunk->perform_block_process(delta);
+			}
 		}
 
 		Chunk* get_chunk(Vector2p pos_chunks) {
@@ -89,22 +93,20 @@ namespace engine {
 			return dimension->default_ground;
 		}
 
-		namespace bullshit {
-			void start_process(Dimension* dimension, Chunk* chunk) {
-				dimension->start_process(chunk);
-			}
+		void start_process(Dimension* dimension, Chunk* chunk) {
+			dimension->start_process(chunk);
+		}
 
-			void start_graphics(Dimension* dimension, Chunk* chunk) {
-				dimension->start_graphics(chunk);
-			}
+		void start_graphics(Dimension* dimension, Chunk* chunk) {
+			dimension->start_graphics(chunk);
+		}
 
-			void end_process(Dimension* dimension, Chunk* chunk) {
-				dimension->end_process(chunk);
-			}
+		void end_process(Dimension* dimension, Chunk* chunk) {
+			dimension->end_process(chunk);
+		}
 
-			void end_graphics(Dimension* dimension, Chunk* chunk) {
-				dimension->end_graphics(chunk);
-			}
+		void end_graphics(Dimension* dimension, Chunk* chunk) {
+			dimension->end_graphics(chunk);
 		}
 	}
 }

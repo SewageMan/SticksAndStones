@@ -1,11 +1,16 @@
 import sys
 import os
 
-
 # Настраиваем окружение для поиска godot-cpp
 env = SConscript("godot-cpp/SConstruct")
 
-env.Append(CCFLAGS=['/std:c++latest'])
+#env["CCFLAGS"].remove('/std:c++17')
+env["CCFLAGS"].append('/std:c++latest')
+
+env['ENV']['VSLANG'] = '1033'
+
+#env["CCFLAGS"].remove('/O2')
+#env["CCFLAGS"].append('/O1')
 
 print("CC =", env.get('CC', 'not set'))
 print("CXX =", env.get('CXX', 'not set'))

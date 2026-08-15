@@ -1,6 +1,8 @@
 #pragma once
 
-#include <tiles/tile_descriptor.hpp>
+#include <tiles/base_tile.hpp>
+#include <blocks/base_block.hpp>
+#include <process.hpp>
 
 namespace engine {
 
@@ -17,9 +19,9 @@ namespace engine {
 	struct Chunk {
 		Dimension* dimension;
 
-		Vector2p pos_chunks;
-		Vector2p pos_blocks;
-		Vector2p pos_units;
+		Vector2Chunk pos_chunks;
+		Vector2Block pos_blocks;
+		Vector2Units pos_units;
 
 		bool data_initialised = false;
 		bool graphics_initialised = false;
@@ -29,9 +31,12 @@ namespace engine {
 		RefCounter loading_process = 0;
 		RefCounter loading_graphics = 0;
 
+		std::vector<Process*> block_processes;
+		std::vector<Process*> render_processes;
+
 		std::array<Chunk*, 4> neighbours = { nullptr, nullptr, nullptr, nullptr };
 
-		ChunkMatrix<std::vector<TileDescriptor*>> floor_stacks;
+		ChunkMatrix<Tile*> floor_tiles;
 
 		Chunk(Dimension* dimension, Vector2p pos_chunks) : dimension(dimension), pos_chunks(pos_chunks), pos_blocks(pos_chunks* chunk_size_blocks), pos_units(pos_chunks* chunk_size_units) {}
 
@@ -43,25 +48,41 @@ namespace engine {
 		}
 
 		void initialise_graphics() {
-
+			for (auto array : floor_tiles) {
+				for (Tile* tile : array) {
+					tile->initialise_graphics();
+				}
+			}
 		}
 
-		void perform_process(Seconds delta) {
-
+		void perform_block_process(Seconds delta) {
+			for (Process* process : block_processes) {
+				process->perform_process(delta);
+			}
 		}
 
-		void perform_graphics_process(Seconds delta) {
-
+		void perform_render_process(Seconds delta) {
+			for (Process* process : render_processes) {
+				process->perform_process(delta);
+			}
 		}
 
 		void set_default_ground() {
 			TileDescriptor* default_ground = bullshit::get_default_ground(dimension);
-			for (size_t x = 0; x < chunk_size_blocks; ++x) {
-				for (size_t y = 0; y < chunk_size_blocks; ++y) {
-					floor_stacks[x][y].resize(1);
-					floor_stacks[x][y][0] = default_ground;
+			for (pos_t x = 0; x < chunk_size_blocks; ++x) {
+				for (pos_t y = 0; y < chunk_size_blocks; ++y) {
+					floor_tiles[x][y] = default_ground->make_object(this, pos_blocks + Vector2Block(x, y));
 				}
 			}
 		}
 	};
+
+	namespace bullshit {
+		void register_block_process(Chunk* chunk, Process* process) {
+			chunk->block_processes.push_back(process);
+		}
+		void register_render_process(Chunk* chunk, Process* process) {
+			chunk->block_processes.push_back(process);
+		}
+	}
 }

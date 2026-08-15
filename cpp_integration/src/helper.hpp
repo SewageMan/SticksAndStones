@@ -23,6 +23,8 @@
 #include <limits>
 #include <random>
 #include <format>
+#include <streambuf>
+#include <concepts>
 
 namespace engine {
 
@@ -40,15 +42,22 @@ namespace engine {
 
 	typedef double Seconds;
 
-	typedef int32_t pos_t;
-	typedef Vector2<pos_t> Vector2p;
+	typedef int32_t pos_t;           // used to store all sizes and positions in world for individual pixels
+	typedef Vector2<pos_t> Vector2p; // used to store a pixel point position in world or size of something
+	typedef Vector2p Vector2Chunk;   // used to store position/size in chunk grid units
+	typedef Vector2p Vector2Block;   // used to store position/size in block grid units
+	typedef Vector2p Vector2Units;   // used to store position/size in pixel grid units
 
-	constexpr pos_t block_size = 50;
-	constexpr pos_t chunk_size_blocks = 10;
-	constexpr pos_t chunk_size_units = chunk_size_blocks * block_size;
+	constexpr pos_t block_size = 32; // how big is one block in pixels
+	constexpr pos_t chunk_size_blocks = 16;  // how big is one chunk in blocks
+	constexpr pos_t chunk_size_units = chunk_size_blocks * block_size;  // how big is one chunk in pixels
+
+	Vector2Units block_size_vec = Vector2Units(block_size, block_size);
 
 	template<typename T>
 	using ChunkMatrix = Matrix2D<T,chunk_size_blocks,chunk_size_blocks>;  // ChunkMatrix[x][y] is correct indexing order
+
+	static std::ostream* out_stream = nullptr;
 
 	template <typename T>
 	std::string to_string_ptr(T* pointer) {
@@ -63,14 +72,17 @@ namespace engine {
 
 	template<typename... T>
 	void print(T... args) {
-		(..., (std::cout << args << " "));
-		std::cout << std::endl;
+		(..., (*out_stream << args << " "));
+		out_stream->flush();
 	}
 
+	class CriticalExceptionStopGodot : public std::runtime_error {
+	public:
+		CriticalExceptionStopGodot(const std::string& msg) : std::runtime_error(msg) {}
+	};
+
 	void panic(const std::string& message) {
-		std::cerr << message << std::endl;
-		std::cerr << std::stacktrace::current() << std::endl;
-		std::terminate();
+		throw CriticalExceptionStopGodot(message + "\n\n" + std::to_string(std::stacktrace::current()));
 	}
 
 	void panic() {
@@ -78,9 +90,7 @@ namespace engine {
 	}
 
 	void panic_path(const std::string& message, const std::string& path) {
-		std::cerr << message << ", at path: '" << path << "'" << std::endl;
-		std::cerr << std::stacktrace::current() << std::endl;
-		std::terminate();
+		panic(message + ", at path: '" + path + "'");
 	}
 
 	bool try_parse_int(const std::string& str, int& out_value) {
