@@ -10,15 +10,13 @@ namespace engine {
 
 	struct Chunk;
 
-	struct ObjectRender;
-
 	struct WorldObject;
 
 	struct ObjectDescriptor;
 
 	namespace bullshit {
-		void register_block_process(Chunk* block, Process* process);
-		void register_render_process(Chunk* render, Process* process);
+		BlockProcessId register_block_process(Chunk* block, Process* process);
+		RenderProcessId register_render_process(Chunk* render, Process* process);
 		void register_descriptor(ObjectDescriptor* descriptor);
 	}
 
@@ -27,31 +25,20 @@ namespace engine {
 
 		ChunkStorage(Chunk* linked_chunk) : linked_chunk(linked_chunk) {}
 
-		void register_process(Process* process) {
-			register_block_process(process);
-		}
-
-		void register_block_process(Process* process) {
+		BlockProcessId register_block_process(Process* process) {
 			bullshit::register_block_process(linked_chunk, process);
 		}
 
-		void register_render_process(Process* process) {
+		RenderProcessId register_render_process(Process* process) {
 			bullshit::register_render_process(linked_chunk, process);
 		}
 	};
 
-	struct ObjectRender {
-		WorldObject* linked_object;
-
-		ObjectRender(WorldObject* linked_object) : linked_object(linked_object) {}
-	};
-
 	struct WorldObject {
-		ObjectDescriptor* descriptor;
-		ObjectRender* linked_render = nullptr;
+		ObjectDescriptor* descriptor_raw;
 		Vector2Block pos_blocks;
 
-		WorldObject(Chunk* linked_chunk, ObjectDescriptor* descriptor, Vector2Block pos_blocks) : descriptor(descriptor), pos_blocks(pos_blocks) {
+		WorldObject(Chunk* linked_chunk, ObjectDescriptor* descriptor, Vector2Block pos_blocks) : descriptor_raw(descriptor), pos_blocks(pos_blocks) {
 			initialise();
 		}
 
@@ -63,12 +50,24 @@ namespace engine {
 
 		}
 
-		virtual void initialise_graphics() {
-			linked_render = initialise_render();
+		virtual void enable_data_process() {
+
 		}
 
-		virtual ObjectRender* initialise_render() {
-			return new ObjectRender(this);
+		virtual void disable_data_process() {
+
+		}
+
+		virtual void enable_graphics() {
+
+		}
+
+		virtual void disable_graphics() {
+
+		}
+
+		virtual void initialise_graphics() {
+			
 		}
 
 		Vector2Units pos_units() {

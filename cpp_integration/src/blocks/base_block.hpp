@@ -5,10 +5,6 @@
 
 namespace engine {
 
-	struct BlockRender : ObjectRender {
-		using ObjectRender::ObjectRender;
-	};
-
 	struct Block : WorldObject {
 		using WorldObject::WorldObject;
 	};

@@ -57,14 +57,16 @@ namespace engine {
 			return false;
 		}
 
-		void generate_chunk(Chunk* chunk) {
+		virtual void generate_chunk(Chunk* chunk) {
 			chunk->set_default_ground();
+			chunk->set_no_blocks();
 		}
 
 		void start_process(Chunk* chunk) {
 			if (not chunk->data_initialised) {
 				chunk->initialise_data();
 			}
+			chunk->enable_data_process();
 			process_running_chunks.push_back(chunk);
 		}
 
@@ -72,14 +74,17 @@ namespace engine {
 			if (not chunk->graphics_initialised) {
 				chunk->initialise_graphics();
 			}
+			chunk->enable_graphics();
 			graphic_running_chunks.push_back(chunk);
 		}
 
 		void end_process(Chunk* chunk) {
+			chunk->disable_data_process();
 			std::erase(process_running_chunks, chunk);
 		}
 
 		void end_graphics(Chunk* chunk) {
+			chunk->disable_graphics();
 			std::erase(graphic_running_chunks, chunk);
 		}
 	};

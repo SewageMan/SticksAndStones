@@ -39,7 +39,7 @@ namespace engine {
 			dimensions::overworld = new Dimension("overworld", tiles::test_ground);
 			add_dimension(dimensions::overworld);
 
-			LoadZoneArea(true, dimensions::overworld, {2,-1}, 1);
+			new LoadZoneArea(true, dimensions::overworld, {2,-1}, 1);
 		}
 
 		void add_dimension(Dimension* dimension) {

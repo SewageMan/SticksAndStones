@@ -5,16 +5,8 @@
 
 namespace engine {
 
-	struct TileRender : public ObjectRender {
-		using ObjectRender::ObjectRender;
-	};
-
 	struct Tile : public WorldObject {
 		using WorldObject::WorldObject;
-
-		virtual TileRender* initialise_render() override {
-			return new TileRender(this);
-		}
 	};
 
 	struct TileDescriptor : public ObjectDescriptor {

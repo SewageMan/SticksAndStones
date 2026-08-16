@@ -26,6 +26,10 @@
 #include <streambuf>
 #include <concepts>
 
+#define NARROW_DESCRIPTOR(type) \
+    type* descriptor() { return static_cast<type*>(descriptor_raw); } \
+    const type* descriptor() const { return static_cast<const type*>(descriptor_raw); }
+
 namespace engine {
 
 	enum Direction {
@@ -108,6 +112,170 @@ namespace engine {
 		stream << file.rdbuf();
 		return stream.str();
 	}
+
+	template <typename T>
+	void reserve_add(std::vector<T>& vec, size_t amount) {
+		vec.reserve(vec.size() + amount);
+	}
+
+	template <typename T>
+	void reserve_exponentialy(std::vector<T>& vec, size_t amount) {
+
+		if (amount > vec.capacity()) {
+
+			size_t newCapacity = vec.capacity() * 2;
+
+			if (newCapacity < amount) {
+				newCapacity = amount;
+			}
+			vec.reserve(newCapacity);
+		}
+	}
+
+	template <typename T>
+	void reserve_add_exponentialy(std::vector<T>& vec, size_t amount) {
+		reserve_exponentialy(vec, vec.size() + amount);
+	}
+
+	template <typename StorageType,typename IndexType>
+	struct PersistentContainer{
+
+		std::vector<StorageType> end_storage;
+		std::vector<IndexType> storage_indexes;
+		std::vector<IndexType> element_indexes;
+		IndexType free_storage_id = 0;
+
+		IndexType add_element(StorageType element) {
+			if (free_storage_id != storage_indexes.size()) {
+				IndexType storage_id = free_storage_id;
+				IndexType element_id = element_indexes[free_storage_id];
+				free_storage_id += 1;
+
+				end_storage[storage_id] = element;
+				return element_id;
+			}
+			else {
+				IndexType storage_id = end_storage.size();
+				IndexType element_id = storage_id;
+				free_storage_id += 1;
+
+				element_indexes.push_back(element_id);
+				storage_indexes.push_back(storage_id);
+				end_storage.push_back(element);
+				return element_id;
+			}
+		}
+
+		void add_elements(std::span<StorageType> elements) {
+			resize(size() + elements.size());
+			for (IndexType add_id = 0; add_id < elements.size(); ++add_id) {
+				end_storage[free_storage_id + add_id] = elements[add_id];
+			}
+			free_storage_id += elements.size();
+		}
+
+		template<typename... T>
+		IndexType emplace_element(T&&... args) {
+			if (free_storage_id != storage_indexes.size()) {
+				IndexType storage_id = free_storage_id;
+				IndexType element_id = element_indexes[free_storage_id];
+				free_storage_id += 1;
+
+				end_storage[storage_id] = StorageType(std::forward<T>(args)...);
+				return element_id;
+			}
+			else {
+				IndexType storage_id = end_storage.size();
+				IndexType element_id = storage_id;
+				free_storage_id += 1;
+
+				element_indexes.push_back(element_id);
+				storage_indexes.push_back(storage_id);
+				end_storage.emplace_back(std::forward<T>(args)...);
+				return element_id;
+			}
+		}
+
+		void set_element(IndexType element_id, StorageType element) {
+			end_storage[element_id] = element;
+		}
+
+		void delete_element(IndexType element_id) {
+			IndexType storage_id = storage_indexes[element_id];
+
+			IndexType last_storage_id = free_storage_id - 1;
+			if (storage_id != last_storage_id) {
+				IndexType last_element_id = element_indexes[last_storage_id];
+				end_storage[storage_id] = std::move(end_storage[last_storage_id]);
+				std::swap(element_indexes[storage_id], element_indexes[last_storage_id]);
+				std::swap(storage_indexes[element_id], storage_indexes[last_element_id]);
+			}
+			free_storage_id = last_storage_id;
+		}
+
+		IndexType size() const {
+			return free_storage_id;
+		}
+
+		IndexType capacity() const {
+			return end_storage.size();
+		}
+
+		void reserve(IndexType to_reserve) {
+			end_storage.reserve(to_reserve);
+			element_indexes.reserve(to_reserve);
+			storage_indexes.reserve(to_reserve);
+		}
+
+		void resize(IndexType to_resize) {
+			IndexType old_size = capacity();
+			if (to_resize <= old_size) {
+				return;
+			}
+			end_storage.resize(to_resize);
+			element_indexes.resize(to_resize);
+			storage_indexes.resize(to_resize);
+			for (IndexType add_id = old_size; add_id < to_resize; ++add_id) {
+				element_indexes[add_id] = add_id;
+				storage_indexes[add_id] = add_id;
+			}
+		}
+
+		StorageType& operator[](IndexType element_id) {
+			return end_storage[storage_indexes[element_id]];
+		}
+
+		const StorageType& operator[](IndexType element_id) const {
+			return end_storage[storage_indexes[element_id]];
+		}
+
+		using iterator = typename std::vector<StorageType>::iterator;
+		using const_iterator = typename std::vector<StorageType>::const_iterator;
+
+		iterator begin() {
+			return end_storage.begin();
+		}
+
+		iterator end() {
+			return end_storage.begin() + free_storage_id;
+		}
+
+		const_iterator begin() const {
+			return end_storage.begin();
+		}
+
+		const_iterator end() const {
+			return end_storage.begin() + free_storage_id;
+		}
+
+		using reverse_iterator = typename std::vector<StorageType>::reverse_iterator;
+		reverse_iterator rbegin() {
+			return end_storage.rbegin() + (end_storage.size() - free_storage_id);
+		}
+		reverse_iterator rend() {
+			return end_storage.rend();
+		}
+	};
 
 	template <typename T>
 	struct BoundingBox {
@@ -376,30 +544,4 @@ namespace engine {
 		os << bbox.to_string();
 		return os;
 	}
-
-	template <typename T>
-	void reserve_add(std::vector<T>& vec, size_t amount) {
-		vec.reserve(vec.size() + amount);
-	}
-
-	template <typename T>
-	void reserve_exponentialy(std::vector<T>& vec, size_t amount) {
-
-		if (amount > vec.capacity()) {
-
-			size_t newCapacity = vec.capacity() * 2;
-
-			if (newCapacity < amount) {
-				newCapacity = amount;
-			}
-			vec.reserve(newCapacity);
-		}
-	}
-
-	template <typename T>
-	void reserve_add_exponentialy(std::vector<T>& vec, size_t amount) {
-		reserve_exponentialy(vec, vec.size() + amount);
-	}
-
-	
 }

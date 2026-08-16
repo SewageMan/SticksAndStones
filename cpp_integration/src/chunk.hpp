@@ -31,12 +31,13 @@ namespace engine {
 		RefCounter loading_process = 0;
 		RefCounter loading_graphics = 0;
 
-		std::vector<Process*> block_processes;
-		std::vector<Process*> render_processes;
+		PersistentContainer<Process*, BlockProcessId> block_processes;
+		PersistentContainer<Process*, RenderProcessId> render_processes;
 
 		std::array<Chunk*, 4> neighbours = { nullptr, nullptr, nullptr, nullptr };
 
 		ChunkMatrix<Tile*> floor_tiles;
+		ChunkMatrix<Block*> blocks;
 
 		Chunk(Dimension* dimension, Vector2p pos_chunks) : dimension(dimension), pos_chunks(pos_chunks), pos_blocks(pos_chunks* chunk_size_blocks), pos_units(pos_chunks* chunk_size_units) {}
 
@@ -45,12 +46,86 @@ namespace engine {
 			neighbours[RIGHT] = bullshit::get_load_chunk(dimension, pos_chunks + Vector2p(1, 0));
 			neighbours[BOTTOM] = bullshit::get_load_chunk(dimension, pos_chunks + Vector2p(0, -1));
 			neighbours[LEFT] = bullshit::get_load_chunk(dimension, pos_chunks + Vector2p(-1, 0));
+
+			for (auto array : floor_tiles) {
+				for (Tile* tile : array) {
+					tile->initialise_data();
+				}
+			}
+			for (auto array : blocks) {
+				for (Block* block : array) {
+					if (block == nullptr) continue;
+					block->initialise_data();
+				}
+			}
 		}
 
 		void initialise_graphics() {
 			for (auto array : floor_tiles) {
 				for (Tile* tile : array) {
 					tile->initialise_graphics();
+				}
+			}
+			for (auto array : blocks) {
+				for (Block* block : array) {
+					if (block == nullptr) continue;
+					block->initialise_graphics();
+				}
+			}
+		}
+
+		void enable_data_process() {
+			for (auto array : floor_tiles) {
+				for (Tile* tile : array) {
+					tile->enable_data_process();
+				}
+			}
+			for (auto array : blocks) {
+				for (Block* block : array) {
+					if (block == nullptr) continue;
+					block->enable_data_process();
+				}
+			}
+		}
+
+		void disable_data_process() {
+			for (auto array : floor_tiles) {
+				for (Tile* tile : array) {
+					tile->disable_data_process();
+				}
+			}
+			for (auto array : blocks) {
+				for (Block* block : array) {
+					if (block == nullptr) continue;
+					block->disable_data_process();
+				}
+			}
+		}
+
+		void enable_graphics() {
+			for (auto array : floor_tiles) {
+				for (Tile* tile : array) {
+					tile->enable_graphics();
+				}
+			}
+			for (auto array : blocks) {
+				for (Block* block : array) {
+					if (block == nullptr) continue;
+					block->enable_graphics();
+				}
+			}
+		}
+
+		void disable_graphics() {
+			for (auto array : floor_tiles) {
+				for (Tile* tile : array) {
+					tile->disable_graphics();
+				}
+			}
+			for (auto array : blocks) {
+				for (Block* block : array) {
+					if (block == nullptr) continue;
+					block->disable_graphics();
 				}
 			}
 		}
@@ -75,14 +150,22 @@ namespace engine {
 				}
 			}
 		}
+
+		void set_no_blocks() {
+			for (pos_t x = 0; x < chunk_size_blocks; ++x) {
+				for (pos_t y = 0; y < chunk_size_blocks; ++y) {
+					blocks[x][y] = nullptr;
+				}
+			}
+		}
 	};
 
 	namespace bullshit {
-		void register_block_process(Chunk* chunk, Process* process) {
-			chunk->block_processes.push_back(process);
+		BlockProcessId register_block_process(Chunk* chunk, Process* process) {
+			return chunk->block_processes.add_element(process);
 		}
-		void register_render_process(Chunk* chunk, Process* process) {
-			chunk->block_processes.push_back(process);
+		RenderProcessId register_render_process(Chunk* chunk, Process* process) {
+			return chunk->block_processes.add_element(process);
 		}
 	}
 }
