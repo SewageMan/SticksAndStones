@@ -1,7 +1,5 @@
 #pragma once
 
-#include <helper.hpp>
-
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/classes/canvas_item.hpp>
 #include <godot_cpp/classes/node2d.hpp>
@@ -29,7 +27,10 @@
 #include <godot_cpp/classes/multi_mesh.hpp>
 #include <godot_cpp/classes/multi_mesh_instance2d.hpp>
 #include <godot_cpp/classes/os.hpp>
+#include <godot_cpp/classes/viewport.hpp>
+#include <godot_cpp/classes/camera2d.hpp>
 
+#include <helper.hpp>
 
 namespace engine {
 

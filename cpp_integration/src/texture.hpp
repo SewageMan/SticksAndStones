@@ -6,8 +6,12 @@ namespace engine {
 
 	constexpr size_t FLOOR = 0;
 	constexpr size_t BLOCK_BELOW = 1;
-	constexpr size_t BLOCK_ABOVE = 2;
-	constexpr size_t ROOF = 3;
+	constexpr size_t PLAYER = 2;
+	constexpr size_t BLOCK_ABOVE = 3;
+	constexpr size_t ROOF = 4;
+	constexpr size_t BASIC_OVERLAY = 5;
+
+	constexpr size_t AMOUNT_DRAW_LAYERS = 6;
 
 	typedef uint32_t TextureId;
 	typedef uint32_t DrawElementId;

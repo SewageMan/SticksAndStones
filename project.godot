@@ -8,17 +8,20 @@
 
 config_version=5
 
+[GDScript_Formatter]
+
+format_on_save=true
+
 [application]
 
 config/name="Sticks and stones odyssey"
-run/main_scene="res://world/world.tscn"
+run/main_scene="res://godot_code/world.tscn"
 config/features=PackedStringArray("4.3")
 config/icon="res://icon.png"
 
 [autoload]
 
 Global="*res://global.gd"
-WorldSave="*res://world/world_save.gd"
 
 [editor_plugins]
 
@@ -153,3 +156,4 @@ common/enable_pause_aware_picking=true
 [rendering]
 
 textures/canvas_textures/default_texture_filter=0
+renderer/rendering_method="gl_compatibility"

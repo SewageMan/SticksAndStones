@@ -7,6 +7,7 @@ void initialize_your_module(ModuleInitializationLevel p_level) {
         return;
     }
     ClassDB::register_class<CppGodotAdapter>();
+    ClassDB::register_abstract_class<GodotByteBuffer>();
 }
 
 void uninitialize_your_module(ModuleInitializationLevel p_level) {

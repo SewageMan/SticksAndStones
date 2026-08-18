@@ -39,14 +39,14 @@ namespace engine {
 		godot::Ref<godot::Texture2D> texture_object;
 		godot::Ref<godot::CanvasItemMaterial> material;
 		godot::Ref<godot::QuadMesh> quad_mesh;
-		std::array<TextureInLayer, 4> texture_in_layers;
+		std::array<TextureInLayer, AMOUNT_DRAW_LAYERS> texture_in_layers;
 	};
 
 	struct GraphicsManager {
 		
 		static constexpr size_t multimesh_starting_size = 16;
 
-		godot::AABB global_aabb = godot::AABB(godot::Vector3(-1e7, -1e7, -1e7), godot::Vector3(1e7, 1e7, 1e7));
+		godot::AABB global_aabb = godot::AABB(godot::Vector3(-1e7, -1e7, -1e7), godot::Vector3(2e7, 2e7, 2e7));
 
 		godot::RenderingServer* rendering_server;
 		godot::ResourceLoader* texture_loader;
@@ -54,16 +54,18 @@ namespace engine {
 		std::vector<TextureContainer> textures;
 		std::unordered_map<std::string, TextureId> texture_names;
 
-		std::array<DrawLayer,4> draw_layers;
+		std::array<DrawLayer, AMOUNT_DRAW_LAYERS> draw_layers;
 
-		void initialise(godot::Node2D* floor_layer_node, godot::Node2D* objects_layer_below_node, godot::Node2D* objects_layer_above_node, godot::Node2D* roof_layer_node) {
+		void initialise(godot::Node2D* floor_layer_node, godot::Node2D* objects_layer_below_node, godot::Node2D* player_layer_node, godot::Node2D* objects_layer_above_node, godot::Node2D* roof_layer_node, godot::Node2D* player_basic_overlay) {
 			rendering_server = godot::RenderingServer::get_singleton();
 			texture_loader = godot::ResourceLoader::get_singleton();
 
 			draw_layers[FLOOR].main_node = floor_layer_node;
 			draw_layers[BLOCK_BELOW].main_node = objects_layer_below_node;
+			draw_layers[PLAYER].main_node = player_layer_node;
 			draw_layers[BLOCK_ABOVE].main_node = objects_layer_above_node;
 			draw_layers[ROOF].main_node = roof_layer_node;
+			draw_layers[BASIC_OVERLAY].main_node = player_basic_overlay;
 		}
 
 		TextureId get_texture_id(std::string texture_path) {

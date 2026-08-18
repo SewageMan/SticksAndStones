@@ -25,6 +25,11 @@
 #include <format>
 #include <streambuf>
 #include <concepts>
+#include <variant>
+#include <cstring>
+#include <cstdint>
+#include <ciso646>
+#include <bit>
 
 #define NARROW_DESCRIPTOR(type) \
     type* descriptor() { return static_cast<type*>(descriptor_raw); } \
@@ -137,12 +142,218 @@ namespace engine {
 		reserve_exponentialy(vec, vec.size() + amount);
 	}
 
+	struct ByteBuffer {
+		uint8_t* data;
+		size_t size;
+		size_t offset;
+		bool owns_data;
+		bool allow_resize;
+
+		ByteBuffer() : data(nullptr), size(0), offset(0), owns_data(false), allow_resize(false) {}
+
+		ByteBuffer(uint8_t* data, size_t size) : data(data), size(size), offset(0), owns_data(false), allow_resize(false) {}
+
+		ByteBuffer(uint8_t* data, size_t size, size_t offset) : data(data), size(size), offset(offset), owns_data(false), allow_resize(false) {}
+
+		ByteBuffer(size_t size) : data(new uint8_t[size]), size(size), offset(0), owns_data(true), allow_resize(false) {}
+
+		ByteBuffer(size_t size, size_t offset) : data(new uint8_t[size]), size(size), offset(offset), owns_data(true), allow_resize(false) {}
+
+		ByteBuffer(size_t size, size_t offset, bool allow_resize) : data(new uint8_t[size]), size(size), offset(offset), owns_data(true), allow_resize(allow_resize) {}
+
+		ByteBuffer(size_t size, bool allow_resize) : data(new uint8_t[size]), size(size), offset(0), owns_data(true), allow_resize(allow_resize) {}
+
+		ByteBuffer(const ByteBuffer& other) : ByteBuffer() {
+			copy_from(other);
+		}
+
+		ByteBuffer& operator=(const ByteBuffer&) = delete;
+
+		void initialise(size_t size, size_t offset = 0, bool allow_resize = false) {
+			clear();
+			data = new uint8_t[size];
+			this->size = size;
+			this->offset = offset;
+			owns_data = true;
+			this->allow_resize = allow_resize;
+		}
+
+		void set_values(uint8_t* data, size_t size, size_t offset = 0, bool owns_data = false, bool allow_resize = false) {
+			this->data = data;
+			this->size = size;
+			this->offset = offset;
+			this->owns_data = owns_data;
+			this->allow_resize = allow_resize;
+		}
+
+		void copy_from(const ByteBuffer& other) {
+			clear();
+			size = other.size;
+			offset = 0;
+			owns_data = true;
+			allow_resize = false;
+
+			data = new uint8_t[other.size];
+			std::memcpy(data, other.data, size);
+		}
+
+		void shallow_copy_from(const ByteBuffer& other) {
+			clear();
+			size = other.size;
+			offset = 0;
+			owns_data = false;
+			allow_resize = false;
+
+			data = other.data;
+		}
+
+		void resize(size_t new_size) {
+			if (not allow_resize) {
+				if (owns_data) {
+					panic("cannot resize buffer as its resize is disabled");
+				}
+				else {
+					panic("cannot resize a buffer that doesent own its data");
+				}
+			}
+			if (new_size > size) {
+				new_size = std::max(new_size, size * 2);
+				uint8_t* new_data = new uint8_t[new_size];
+				std::memcpy(new_data, data, size);
+				delete[] data;
+				data = new_data;
+				size = new_size;
+			}
+			else if (new_size < size) {
+				uint8_t* new_data = new uint8_t[new_size];
+				std::memcpy(new_data, data, new_size);
+				delete[] data;
+				data = new_data;
+				size = new_size;
+			}
+			else {
+				return;
+			}
+		}
+
+		template<typename T>
+		void write(const T& value) {
+			if constexpr (std::is_trivially_copyable_v<T>) {
+				size_t required_size = offset + sizeof(T);
+				if (required_size > size) {
+					resize(required_size);
+				}
+				std::memcpy(data + offset, &value, sizeof(T));
+				offset += sizeof(T);
+			}
+			else if (std::is_same_v<std::remove_cvref_t<T>, std::string>) {
+				size_t string_size = value.size();
+				if (offset + sizeof(size_t) + string_size > size) {
+					resize(offset + sizeof(size_t) + string_size);
+				}
+				std::memcpy(data + offset, &string_size, sizeof(size_t));
+				std::memcpy(data + offset + sizeof(size_t), value.data(), string_size);
+				offset += sizeof(size_t) + string_size;
+			}
+			else {
+				static_assert(sizeof(T) == 0, "T must be trivially copyable");
+			}
+		}
+
+		template<typename T>
+		void read(T& value) {
+			if constexpr (std::is_trivially_copyable_v<T>) {
+				if (offset + sizeof(T) > size) {
+					panic("not enough bytes to read from byte buffer");
+				}
+				std::memcpy(&value, data + offset, sizeof(T));
+				offset += sizeof(T);
+			}
+			else if (std::is_same_v<std::remove_cvref_t<T>, std::string>) {
+				if (offset + sizeof(size_t) > size) {
+					panic("not enough bytes to read from byte buffer");
+				}
+				size_t string_size;
+				std::memcpy(&string_size, data + offset, sizeof(size_t));
+				if (offset + sizeof(size_t) + string_size > size) {
+					panic("not enough bytes to read from byte buffer");
+				}
+				value.assign(reinterpret_cast<const char*>(data + offset + sizeof(size_t)), string_size);
+				offset += sizeof(size_t) + string_size;
+			}
+			else {
+				static_assert(sizeof(T) == 0, "T must be trivially copyable");
+			}
+		}
+
+		void write_bytes(void* value, size_t value_size) {
+			size_t required_size = offset + value_size;
+			if (required_size > size) {
+				resize(required_size);
+			}
+			std::memcpy(data + offset, value, value_size);
+			offset += value_size;
+		}
+
+		void read_bytes(void* value, size_t value_size) {
+			if (offset + value_size > size) {
+				panic("not enough bytes to read from byte buffer");
+			}
+			std::memcpy(value, data + offset, value_size);
+			offset += value_size;
+		}
+
+		void copy_from_bytes(ByteBuffer& other, size_t chunk_size) {
+			size_t required_size = offset + chunk_size;
+			if (required_size > size) {
+				resize(required_size);
+			}
+			size_t required_size_other = other.offset + chunk_size;
+			if (required_size_other > other.size) {
+				other.resize(required_size_other);
+			}
+			std::memcpy(data + offset, other.data + other.offset, chunk_size);
+			offset += chunk_size;
+		}
+
+		void clear() {
+			if (owns_data) {
+				delete[] data;
+			}
+			data = nullptr;
+			size = 0;
+			offset = 0;
+			owns_data = false;
+			allow_resize = false;
+		}
+
+		bool is_valid() const {
+			return data != nullptr;
+		}
+
+		size_t left_bytes() const {
+			return size - offset;
+		}
+
+		~ByteBuffer() {
+			if (owns_data) {
+				delete[] data;
+			}
+		}
+	};
+
+	inline std::ostream& operator<<(std::ostream& os, const ByteBuffer& buffer) {
+		os << "ByteBuffer(" << static_cast<void*>(buffer.data) << ", " << buffer.size << ", " << buffer.offset << ", " << buffer.owns_data << ", " << buffer.allow_resize << ")";
+		return os;
+	}
+
 	template <typename StorageType,typename IndexType>
 	struct PersistentContainer{
 
 		std::vector<StorageType> end_storage;
 		std::vector<IndexType> storage_indexes;
 		std::vector<IndexType> element_indexes;
+		std::vector<IndexType> generations;
 		IndexType free_storage_id = 0;
 
 		IndexType add_element(StorageType element) {
@@ -161,17 +372,18 @@ namespace engine {
 
 				element_indexes.push_back(element_id);
 				storage_indexes.push_back(storage_id);
+				generations.push_back(0);
 				end_storage.push_back(element);
 				return element_id;
 			}
 		}
 
 		void add_elements(std::span<StorageType> elements) {
-			resize(size() + elements.size());
+			IndexType old_size = size();
+			resize(old_size + elements.size());
 			for (IndexType add_id = 0; add_id < elements.size(); ++add_id) {
-				end_storage[free_storage_id + add_id] = elements[add_id];
+				end_storage[old_size + add_id] = elements[add_id];
 			}
-			free_storage_id += elements.size();
 		}
 
 		template<typename... T>
@@ -191,6 +403,7 @@ namespace engine {
 
 				element_indexes.push_back(element_id);
 				storage_indexes.push_back(storage_id);
+				generations.push_back(0);
 				end_storage.emplace_back(std::forward<T>(args)...);
 				return element_id;
 			}
@@ -198,6 +411,10 @@ namespace engine {
 
 		void set_element(IndexType element_id, StorageType element) {
 			end_storage[element_id] = element;
+		}
+
+		StorageType get_element(IndexType element_id) {
+			return end_storage[element_id];
 		}
 
 		void delete_element(IndexType element_id) {
@@ -210,6 +427,7 @@ namespace engine {
 				std::swap(element_indexes[storage_id], element_indexes[last_storage_id]);
 				std::swap(storage_indexes[element_id], storage_indexes[last_element_id]);
 			}
+			generations[element_id] += 1;
 			free_storage_id = last_storage_id;
 		}
 
@@ -222,19 +440,33 @@ namespace engine {
 		}
 
 		void reserve(IndexType to_reserve) {
-			end_storage.reserve(to_reserve);
-			element_indexes.reserve(to_reserve);
-			storage_indexes.reserve(to_reserve);
+			IndexType old_capacity = capacity();
+			if (to_reserve <= old_capacity) {
+				return;
+			}
+			end_storage.resize(to_reserve);
+			element_indexes.resize(to_reserve);
+			storage_indexes.resize(to_reserve);
+			generations.resize(to_reserve, 0);
+			for (IndexType add_id = old_capacity; add_id < to_reserve; ++add_id) {
+				element_indexes[add_id] = add_id;
+				storage_indexes[add_id] = add_id;
+			}
 		}
 
 		void resize(IndexType to_resize) {
-			IndexType old_size = capacity();
+			IndexType old_size = size();
 			if (to_resize <= old_size) {
+				return;
+			}
+			free_storage_id = to_resize;
+			if (to_resize <= capacity()) {
 				return;
 			}
 			end_storage.resize(to_resize);
 			element_indexes.resize(to_resize);
 			storage_indexes.resize(to_resize);
+			generations.resize(to_resize, 0);
 			for (IndexType add_id = old_size; add_id < to_resize; ++add_id) {
 				element_indexes[add_id] = add_id;
 				storage_indexes[add_id] = add_id;
@@ -274,6 +506,72 @@ namespace engine {
 		}
 		reverse_iterator rend() {
 			return end_storage.rend();
+		}
+
+		struct SnapshotIterator {
+			const PersistentContainer* container;
+			std::vector<std::pair<IndexType, IndexType>> snapshot;
+			size_t index;
+
+			SnapshotIterator(const PersistentContainer& container) : container(&container), index(0) {
+				snapshot.reserve(container.free_storage_id);
+				for (IndexType storage_id = 0; storage_id < container.free_storage_id; ++storage_id) {
+					IndexType element_id = container.element_indexes[storage_id];
+					snapshot.emplace_back(element_id, container.generations[element_id]);
+				}
+				if (snapshot.empty()) {
+					this->container = nullptr;
+				}
+			}
+
+			SnapshotIterator() : container(nullptr), index(0) {}
+
+			bool is_valid() const {
+				if (index >= snapshot.size()) return false;
+				auto [id, gen] = snapshot[index];
+				return container->generations[id] == gen;
+			}
+
+			void skip_invalid() {
+				while (index < snapshot.size() && !is_valid()) {
+					++index;
+				}
+			}
+
+			StorageType operator*() const {
+				auto [id, gen] = snapshot[index];
+				IndexType storage_id = container->storage_indexes[id];
+				return container->end_storage[storage_id];
+			}
+
+			SnapshotIterator& operator++() {
+				++index;
+				skip_invalid();
+				if (index >= snapshot.size()) {
+					container = nullptr;
+					index = 0;
+				}
+				return *this;
+			}
+
+			bool operator!=(const SnapshotIterator& other) const {
+				return container != other.container || index != other.index;
+			}
+
+			SnapshotIterator begin() const { return *this; }
+			SnapshotIterator end() const { return SnapshotIterator(); }
+		};
+
+		struct SnapshotRange {
+			const PersistentContainer& container;
+			SnapshotRange(const PersistentContainer& c) : container(c) {}
+
+			SnapshotIterator begin() const { return SnapshotIterator(container); }
+			SnapshotIterator end() const { return SnapshotIterator(); }
+		};
+
+		SnapshotRange snapshot() const {
+			return SnapshotRange(*this);
 		}
 	};
 

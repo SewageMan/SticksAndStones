@@ -1,0 +1,34 @@
+[gd_scene load_steps=2 format=3 uid="uid://cie0job0dbkc6"]
+
+[ext_resource type="Script" path="res://godot_code/world.gd" id="1_mh7w4"]
+
+[node name="World" type="Node2D"]
+script = ExtResource("1_mh7w4")
+
+[node name="floor_layer_node" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="objects_layer_below_node" type="Node2D" parent="."]
+unique_name_in_owner = true
+z_index = 1
+
+[node name="player_layer_node" type="Node2D" parent="."]
+unique_name_in_owner = true
+z_index = 2
+
+[node name="objects_layer_above_node" type="Node2D" parent="."]
+unique_name_in_owner = true
+z_index = 3
+
+[node name="roof_layer_node" type="Node2D" parent="."]
+unique_name_in_owner = true
+z_index = 4
+
+[node name="ui_canvas_layer" type="CanvasLayer" parent="."]
+layer = 5
+
+[node name="player_basic_overlay" type="Node2D" parent="ui_canvas_layer"]
+unique_name_in_owner = true
+
+[node name="world_camera" type="Camera2D" parent="."]
+unique_name_in_owner = true
