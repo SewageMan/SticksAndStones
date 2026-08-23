@@ -18,9 +18,9 @@ namespace engine {
 		T x;
 		T y;
 
-		Vector2() {}
+		constexpr Vector2() noexcept {}
 
-		Vector2(T x_val, T y_val) : x(x_val), y(y_val) {}
+		constexpr Vector2(T x_val, T y_val) noexcept : x(x_val), y(y_val) {}
 
 		Vector2<T> going_to(const Vector2<T> other) const {
 			return other - (*this);

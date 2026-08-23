@@ -1,8 +1,6 @@
 #pragma once
 
-#include <dimension.hpp>
 #include <tiles/simple_tile.hpp>
-#include <load_zone.hpp>
 
 class CppCore;
 
@@ -39,7 +37,7 @@ namespace engine {
 			dimensions::overworld = new Dimension("overworld", tiles::test_ground);
 			add_dimension(dimensions::overworld);
 
-			new LoadZoneArea(true, dimensions::overworld, {2,-1}, 1);
+			new LoadZoneArea(true, dimensions::overworld, {2,-1}, 2);
 		}
 
 		void add_dimension(Dimension* dimension) {

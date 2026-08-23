@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tiles/base_tile.hpp>
+#include <world.hpp>
 
 
 namespace engine {
@@ -16,7 +16,7 @@ namespace engine {
 			multimesh = texture.get_multimesh(FLOOR, 0);
 		}
 
-		virtual Tile* make_object(Chunk* linked_chunk, Vector2Block pos_blocks) override;
+		virtual Tile* make_object(Chunk* linked_chunk, Vector2Blocks pos_blocks) override;
 	};
 
 	struct SimpleTile : public Tile {
@@ -34,7 +34,7 @@ namespace engine {
 		}
 	};
 
-	Tile* SimpleTileDescriptor::make_object(Chunk* linked_chunk, Vector2Block pos_blocks) {
+	Tile* SimpleTileDescriptor::make_object(Chunk* linked_chunk, Vector2Blocks pos_blocks) {
 		return new SimpleTile(linked_chunk, this, pos_blocks);
 	}
 }

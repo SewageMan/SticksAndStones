@@ -6,21 +6,13 @@
 
 namespace engine {
 
-	typedef uint32_t ObjectDescriptorId;
-
-	struct Chunk;
-
-	struct WorldObject;
-
-	struct ObjectDescriptor;
-
 	namespace bullshit {
 		BlockProcessId register_block_process(Chunk* block, Process* process);
 		RenderProcessId register_render_process(Chunk* render, Process* process);
 		void register_descriptor(ObjectDescriptor* descriptor);
 	}
 
-	struct ChunkStorage {
+	struct TemplatedChunkStorage {
 		Chunk* linked_chunk;
 
 		ChunkStorage(Chunk* linked_chunk) : linked_chunk(linked_chunk) {}
@@ -34,11 +26,12 @@ namespace engine {
 		}
 	};
 
-	struct WorldObject {
+	template <typename = void>
+	struct TemplatedWorldObject {
 		ObjectDescriptor* descriptor_raw;
-		Vector2Block pos_blocks;
+		Vector2Blocks pos_blocks;
 
-		WorldObject(Chunk* linked_chunk, ObjectDescriptor* descriptor, Vector2Block pos_blocks) : descriptor_raw(descriptor), pos_blocks(pos_blocks) {
+		WorldObject(Chunk* linked_chunk, ObjectDescriptor* descriptor, Vector2Blocks pos_blocks) : descriptor_raw(descriptor), pos_blocks(pos_blocks) {
 			initialise();
 		}
 
@@ -75,7 +68,8 @@ namespace engine {
 		}
 	};
 
-	struct ObjectDescriptor {
+	template <typename = void>
+	struct TemplatedObjectDescriptor {
 		ObjectDescriptorId descriptor_id;
 		std::string descriptor_name;
 
@@ -83,8 +77,9 @@ namespace engine {
 			bullshit::register_descriptor(this);
 		}
 
-		virtual WorldObject* make_object(Chunk* linked_chunk, Vector2Block pos_blocks) {
+		virtual WorldObject* make_object(Chunk* linked_chunk, Vector2Blocks pos_blocks) {
 			return new WorldObject(linked_chunk, this, pos_blocks);
 		}
 	};
+
 }

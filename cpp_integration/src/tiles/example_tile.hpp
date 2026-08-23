@@ -12,7 +12,7 @@ namespace engine {
 	struct TileDescriptor : public ObjectDescriptor {
 		using ObjectDescriptor::ObjectDescriptor;
 
-		virtual Tile* make_object(Chunk* linked_chunk, Vector2Block pos_blocks) override {
+		virtual Tile* make_object(Chunk* linked_chunk, Vector2Blocks pos_blocks) override {
 			return new Tile(linked_chunk, this, pos_blocks);
 		}
 	};

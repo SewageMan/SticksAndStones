@@ -51,17 +51,21 @@ namespace engine {
 
 	typedef double Seconds;
 
-	typedef int32_t pos_t;           // used to store all sizes and positions in world for individual pixels
-	typedef Vector2<pos_t> Vector2p; // used to store a pixel point position in world or size of something
-	typedef Vector2p Vector2Chunk;   // used to store position/size in chunk grid units
-	typedef Vector2p Vector2Block;   // used to store position/size in block grid units
-	typedef Vector2p Vector2Units;   // used to store position/size in pixel grid units
+	typedef int32_t CoordinateChunks;
+	typedef int32_t CoordinateBlocks;
+	typedef int32_t CoordinateUnits;
+	typedef float CoordinateUnitsf;
+	typedef Vector2<CoordinateChunks> Vector2Chunks;    // used to store position/size in chunk grid units
+	typedef Vector2<CoordinateBlocks> Vector2Blocks;    // used to store position/size in block grid units
+	typedef Vector2<CoordinateUnits> Vector2Units;     // used to store position/size in pixel grid units
+	typedef Vector2<CoordinateUnitsf> Vector2Unitsf;
 
-	constexpr pos_t block_size = 32; // how big is one block in pixels
-	constexpr pos_t chunk_size_blocks = 16;  // how big is one chunk in blocks
-	constexpr pos_t chunk_size_units = chunk_size_blocks * block_size;  // how big is one chunk in pixels
+	constexpr CoordinateUnits block_size = 32; // how big is one block in pixels
+	constexpr CoordinateUnitsf block_sizef = 32;
+	constexpr CoordinateBlocks chunk_size_blocks = 32;  // how big is one chunk in blocks
+	constexpr CoordinateUnits chunk_size_units = chunk_size_blocks * block_size;  // how big is one chunk in pixels
 
-	Vector2Units block_size_vec = Vector2Units(block_size, block_size);
+	constexpr Vector2Units block_size_vec = Vector2Units(block_size, block_size);
 
 	template<typename T>
 	using ChunkMatrix = Matrix2D<T,chunk_size_blocks,chunk_size_blocks>;  // ChunkMatrix[x][y] is correct indexing order
