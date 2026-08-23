@@ -29,8 +29,6 @@ namespace engine {
 		Dimension* dimension;
 
 		Vector2Chunks pos_chunks;
-		Vector2Blocks pos_blocks;
-		Vector2Units pos_units;
 
 		bool data_initialised = false;
 		bool graphics_initialised = false;
@@ -48,7 +46,7 @@ namespace engine {
 		ChunkMatrix<Tile*> floor_tiles;
 		ChunkMatrix<Block*> blocks;
 
-		Chunk(Dimension* dimension, Vector2Chunks pos_chunks) : dimension(dimension), pos_chunks(pos_chunks), pos_blocks(pos_chunks* chunk_size_blocks), pos_units(pos_chunks* chunk_size_units) {}
+		Chunk(Dimension* dimension, Vector2Chunks pos_chunks) : dimension(dimension), pos_chunks(pos_chunks) {}
 
 		void initialise_data();
 		void initialise_graphics();
@@ -106,20 +104,18 @@ namespace engine {
 
 	struct WorldObject {
 		ObjectDescriptor* descriptor_raw;
-		Vector2Blocks pos_blocks;
 
-		WorldObject(Chunk* linked_chunk, ObjectDescriptor* descriptor, Vector2Blocks pos_blocks) : descriptor_raw(descriptor), pos_blocks(pos_blocks) {
-			initialise();
+		WorldObject(Chunk* linked_chunk, Vector2Blocks pos_blocks, ObjectDescriptor* descriptor) : descriptor_raw(descriptor) {
+			initialise(linked_chunk, pos_blocks);
 		}
 
-		virtual void initialise();
-		virtual void initialise_data();
-		virtual void enable_data_process();
-		virtual void disable_data_process();
-		virtual void enable_graphics();
-		virtual void disable_graphics();
-		virtual void initialise_graphics();
-		Vector2Units pos_units();
+		virtual void initialise(Chunk* linked_chunk, Vector2Blocks pos_blocks);
+		virtual void initialise_data(Chunk* linked_chunk, Vector2Blocks pos_blocks);
+		virtual void enable_data_process(Chunk* linked_chunk, Vector2Blocks pos_blocks);
+		virtual void disable_data_process(Chunk* linked_chunk, Vector2Blocks pos_blocks);
+		virtual void enable_graphics(Chunk* linked_chunk, Vector2Blocks pos_blocks);
+		virtual void disable_graphics(Chunk* linked_chunk, Vector2Blocks pos_blocks);
+		virtual void initialise_graphics(Chunk* linked_chunk, Vector2Blocks pos_blocks);
 	};
 
 	struct ObjectDescriptor {
@@ -161,85 +157,97 @@ namespace engine {
 		neighbours[BOTTOM] = dimension->get_load_chunk(pos_chunks + Vector2Chunks(0, -1));
 		neighbours[LEFT] = dimension->get_load_chunk(pos_chunks + Vector2Chunks(-1, 0));
 
-		for (auto array : floor_tiles) {
-			for (Tile* tile : array) {
-				tile->initialise_data();
+		for (CoordinateBlocks x = 0; x < chunk_size_blocks; ++x) {
+			for (CoordinateBlocks y = 0; y < chunk_size_blocks; ++y) {
+				floor_tiles[x][y]->initialise_data(this, { x, y });
 			}
 		}
-		for (auto array : blocks) {
-			for (Block* block : array) {
-				if (block == nullptr) continue;
-				block->initialise_data();
+		for (CoordinateBlocks x = 0; x < chunk_size_blocks; ++x) {
+			for (CoordinateBlocks y = 0; y < chunk_size_blocks; ++y) {
+				Block* block = blocks[x][y];
+				if (block != nullptr) {
+					blocks[x][y]->initialise_data(this, { x, y });
+				}
 			}
 		}
 	}
 
 	void Chunk::initialise_graphics() {
-		for (auto array : floor_tiles) {
-			for (Tile* tile : array) {
-				tile->initialise_graphics();
+		for (CoordinateBlocks x = 0; x < chunk_size_blocks; ++x) {
+			for (CoordinateBlocks y = 0; y < chunk_size_blocks; ++y) {
+				floor_tiles[x][y]->initialise_graphics(this, { x, y });
 			}
 		}
-		for (auto array : blocks) {
-			for (Block* block : array) {
-				if (block == nullptr) continue;
-				block->initialise_graphics();
+		for (CoordinateBlocks x = 0; x < chunk_size_blocks; ++x) {
+			for (CoordinateBlocks y = 0; y < chunk_size_blocks; ++y) {
+				Block* block = blocks[x][y];
+				if (block != nullptr) {
+					blocks[x][y]->initialise_graphics(this, { x, y });
+				}
 			}
 		}
 	}
 
 	void Chunk::enable_data_process() {
-		for (auto array : floor_tiles) {
-			for (Tile* tile : array) {
-				tile->enable_data_process();
+		for (CoordinateBlocks x = 0; x < chunk_size_blocks; ++x) {
+			for (CoordinateBlocks y = 0; y < chunk_size_blocks; ++y) {
+				floor_tiles[x][y]->enable_data_process(this, { x, y });
 			}
 		}
-		for (auto array : blocks) {
-			for (Block* block : array) {
-				if (block == nullptr) continue;
-				block->enable_data_process();
+		for (CoordinateBlocks x = 0; x < chunk_size_blocks; ++x) {
+			for (CoordinateBlocks y = 0; y < chunk_size_blocks; ++y) {
+				Block* block = blocks[x][y];
+				if (block != nullptr) {
+					blocks[x][y]->enable_data_process(this, { x, y });
+				}
 			}
 		}
 	}
 
 	void Chunk::disable_data_process() {
-		for (auto array : floor_tiles) {
-			for (Tile* tile : array) {
-				tile->disable_data_process();
+		for (CoordinateBlocks x = 0; x < chunk_size_blocks; ++x) {
+			for (CoordinateBlocks y = 0; y < chunk_size_blocks; ++y) {
+				floor_tiles[x][y]->disable_data_process(this, { x, y });
 			}
 		}
-		for (auto array : blocks) {
-			for (Block* block : array) {
-				if (block == nullptr) continue;
-				block->disable_data_process();
+		for (CoordinateBlocks x = 0; x < chunk_size_blocks; ++x) {
+			for (CoordinateBlocks y = 0; y < chunk_size_blocks; ++y) {
+				Block* block = blocks[x][y];
+				if (block != nullptr) {
+					blocks[x][y]->disable_data_process(this, { x, y });
+				}
 			}
 		}
 	}
 
 	void Chunk::enable_graphics() {
-		for (auto array : floor_tiles) {
-			for (Tile* tile : array) {
-				tile->enable_graphics();
+		for (CoordinateBlocks x = 0; x < chunk_size_blocks; ++x) {
+			for (CoordinateBlocks y = 0; y < chunk_size_blocks; ++y) {
+				floor_tiles[x][y]->enable_graphics(this, { x, y });
 			}
 		}
-		for (auto array : blocks) {
-			for (Block* block : array) {
-				if (block == nullptr) continue;
-				block->enable_graphics();
+		for (CoordinateBlocks x = 0; x < chunk_size_blocks; ++x) {
+			for (CoordinateBlocks y = 0; y < chunk_size_blocks; ++y) {
+				Block* block = blocks[x][y];
+				if (block != nullptr) {
+					blocks[x][y]->enable_graphics(this, { x, y });
+				}
 			}
 		}
 	}
 
 	void Chunk::disable_graphics() {
-		for (auto array : floor_tiles) {
-			for (Tile* tile : array) {
-				tile->disable_graphics();
+		for (CoordinateBlocks x = 0; x < chunk_size_blocks; ++x) {
+			for (CoordinateBlocks y = 0; y < chunk_size_blocks; ++y) {
+				floor_tiles[x][y]->disable_graphics(this, { x, y });
 			}
 		}
-		for (auto array : blocks) {
-			for (Block* block : array) {
-				if (block == nullptr) continue;
-				block->disable_graphics();
+		for (CoordinateBlocks x = 0; x < chunk_size_blocks; ++x) {
+			for (CoordinateBlocks y = 0; y < chunk_size_blocks; ++y) {
+				Block* block = blocks[x][y];
+				if (block != nullptr) {
+					blocks[x][y]->disable_graphics(this, { x, y });
+				}
 			}
 		}
 	}
@@ -260,7 +268,7 @@ namespace engine {
 		TileDescriptor* default_ground = dimension->default_ground;
 		for (CoordinateBlocks x = 0; x < chunk_size_blocks; ++x) {
 			for (CoordinateBlocks y = 0; y < chunk_size_blocks; ++y) {
-				floor_tiles[x][y] = default_ground->make_object(this, pos_blocks + Vector2Blocks(x, y));
+				floor_tiles[x][y] = default_ground->make_object(this, Vector2Blocks(x, y));
 			}
 		}
 	}
@@ -419,36 +427,32 @@ namespace engine {
 
 	// WORLDOBJECT DEFINITION START
 
-	void WorldObject::initialise() {
+	void WorldObject::initialise(Chunk* linked_chunk, Vector2Blocks pos_blocks) {
 
 	}
 
-	void WorldObject::initialise_data() {
+	void WorldObject::initialise_data(Chunk* linked_chunk, Vector2Blocks pos_blocks) {
 
 	}
 
-	void WorldObject::enable_data_process() {
+	void WorldObject::enable_data_process(Chunk* linked_chunk, Vector2Blocks pos_blocks) {
 
 	}
 
-	void WorldObject::disable_data_process() {
+	void WorldObject::disable_data_process(Chunk* linked_chunk, Vector2Blocks pos_blocks) {
 
 	}
 
-	void WorldObject::enable_graphics() {
+	void WorldObject::enable_graphics(Chunk* linked_chunk, Vector2Blocks pos_blocks) {
 
 	}
 
-	void WorldObject::disable_graphics() {
+	void WorldObject::disable_graphics(Chunk* linked_chunk, Vector2Blocks pos_blocks) {
 
 	}
 
-	void WorldObject::initialise_graphics() {
+	void WorldObject::initialise_graphics(Chunk* linked_chunk, Vector2Blocks pos_blocks) {
 
-	}
-
-	Vector2Units WorldObject::pos_units() {
-		return pos_blocks * block_size;
 	}
 
 	// WORLDOBJECT DEFINITION END

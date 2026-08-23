@@ -226,6 +226,10 @@ namespace engine {
 			return std::isinf(x) or std::isinf(y);
 		}
 
+		bool is_zero() const {
+			return x == 0 and y == 0;
+		}
+
 		Vector2<T> get_round() const {
 			return Vector2<T>(std::round(x), std::round(y));
 		}

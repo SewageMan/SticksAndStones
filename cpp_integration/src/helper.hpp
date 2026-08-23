@@ -44,8 +44,8 @@ namespace engine {
 		LEFT = 3
 	};
 
-	template<typename T, int rows, int collums>
-	using Matrix2D = std::array<std::array<T, rows>, collums>;
+	template<typename T, size_t size_x, size_t size_y>
+	using Matrix2D = std::array<std::array<T, size_y>, size_x>;
 
 	typedef uint32_t RefCounter;
 
@@ -55,10 +55,12 @@ namespace engine {
 	typedef int32_t CoordinateBlocks;
 	typedef int32_t CoordinateUnits;
 	typedef float CoordinateUnitsf;
+	typedef double CoordinateGlobal;
 	typedef Vector2<CoordinateChunks> Vector2Chunks;    // used to store position/size in chunk grid units
 	typedef Vector2<CoordinateBlocks> Vector2Blocks;    // used to store position/size in block grid units
-	typedef Vector2<CoordinateUnits> Vector2Units;     // used to store position/size in pixel grid units
+	typedef Vector2<CoordinateUnits> Vector2Units;      // used to store position/size in pixel grid units
 	typedef Vector2<CoordinateUnitsf> Vector2Unitsf;
+	typedef Vector2<CoordinateGlobal> Vector2Global;    // used to store position/size in pixel grid units in global coordinates
 
 	constexpr CoordinateUnits block_size = 32; // how big is one block in pixels
 	constexpr CoordinateUnitsf block_sizef = 32;
@@ -71,6 +73,15 @@ namespace engine {
 	using ChunkMatrix = Matrix2D<T,chunk_size_blocks,chunk_size_blocks>;  // ChunkMatrix[x][y] is correct indexing order
 
 	static std::ostream* out_stream = nullptr;
+
+	std::pair<Vector2Chunks, Vector2Unitsf> to_local_coords(Vector2Global global_coords) {
+
+		Vector2Chunks chunk_pos = static_cast<Vector2Chunks>((global_coords / chunk_size_units).get_floor());
+
+		Vector2Unitsf unit_pos = static_cast<Vector2Unitsf>(global_coords - chunk_pos * chunk_size_units);
+
+		return { chunk_pos, unit_pos };
+	}
 
 	template <typename T>
 	std::string to_string_ptr(T* pointer) {

@@ -16,14 +16,15 @@ namespace engine {
 		std::vector<DrawElementId> free_elements;
 	};
 
-	struct DrawSubLayer {
+	struct DrawSublayer {
 		godot::RID linked_canvas_item;
 		std::vector<DrawMultimesh> multimeshes;
 	};
 
 	struct DrawLayer {
 		godot::Node2D* main_node;
-		std::vector<DrawSubLayer> sublayers;
+		std::vector<DrawSublayer> sublayers;
+		bool is_world = false;
 	};
 
 	struct TextureInSubLayer {
@@ -46,6 +47,8 @@ namespace engine {
 		
 		static constexpr size_t multimesh_starting_size = 16;
 
+		static constexpr size_t transform_size_floats = 8;
+
 		godot::AABB global_aabb = godot::AABB(godot::Vector3(-1e7, -1e7, -1e7), godot::Vector3(2e7, 2e7, 2e7));
 
 		godot::RenderingServer* rendering_server;
@@ -54,9 +57,16 @@ namespace engine {
 		std::vector<TextureContainer> textures;
 		std::unordered_map<std::string, TextureId> texture_names;
 
+		Vector2Unitsf camera_pos_units = { 0,0 };
+		Vector2Chunks camera_pos_chunks = { 0,0 };
+
+		godot::Camera2D* camera;
+
 		std::array<DrawLayer, AMOUNT_DRAW_LAYERS> draw_layers;
 
-		void initialise(godot::Node2D* floor_layer_node, godot::Node2D* objects_layer_below_node, godot::Node2D* player_layer_node, godot::Node2D* objects_layer_above_node, godot::Node2D* roof_layer_node, godot::Node2D* player_basic_overlay) {
+		void initialise(godot::Camera2D* camera, godot::Node2D* floor_layer_node, godot::Node2D* objects_layer_below_node, godot::Node2D* player_layer_node, godot::Node2D* objects_layer_above_node, godot::Node2D* roof_layer_node, godot::Node2D* player_basic_overlay) {
+			this->camera = camera;
+			
 			rendering_server = godot::RenderingServer::get_singleton();
 			texture_loader = godot::ResourceLoader::get_singleton();
 
@@ -66,6 +76,45 @@ namespace engine {
 			draw_layers[BLOCK_ABOVE].main_node = objects_layer_above_node;
 			draw_layers[ROOF].main_node = roof_layer_node;
 			draw_layers[BASIC_OVERLAY].main_node = player_basic_overlay;
+
+			draw_layers[FLOOR].is_world = true;
+			draw_layers[BLOCK_BELOW].is_world = true;
+			draw_layers[PLAYER].is_world = true;
+			draw_layers[BLOCK_ABOVE].is_world = true;
+			draw_layers[ROOF].is_world = true;
+
+			set_camera_pos({ 0,0 }, { 0, 0 });
+		}
+
+		void set_camera_pos(Vector2Chunks pos_chunks, Vector2Unitsf pos_units) {
+			//print(camera_pos_chunks, camera_pos_units, pos_chunks, pos_units);
+			Vector2Chunks chunks_diff = camera_pos_chunks - pos_chunks;
+			if (not chunks_diff.is_zero()) {
+				const Vector2Unitsf unit_shift = static_cast<Vector2Unitsf>(chunks_diff * chunk_size_units);
+				for (DrawLayer& draw_layer : draw_layers) {
+					if (draw_layer.is_world) {
+						for (DrawSublayer& draw_sublayer :draw_layer.sublayers) {
+							for (DrawMultimesh& multimesh : draw_sublayer.multimeshes) {
+								godot::PackedFloat32Array buffer = rendering_server->multimesh_get_buffer(multimesh.multimesh);
+								float* data = buffer.ptrw();
+								size_t buffer_size = buffer.size();
+								for (size_t offset = 0; offset < buffer_size; offset += transform_size_floats) {
+									data[offset + 3] += unit_shift.x;
+									data[offset + 7] += unit_shift.y;
+								}
+								rendering_server->multimesh_set_buffer(multimesh.multimesh, buffer);
+							}
+						}
+					}
+				}
+			}
+			camera_pos_chunks = pos_chunks;
+			camera_pos_units = pos_units;
+			camera->set_position(godot::Vector2(pos_units.x, pos_units.y));
+		}
+
+		void set_camera_zoom(float scale) {
+			camera->set_zoom(godot::Vector2(scale, scale));
 		}
 
 		TextureId get_texture_id(std::string texture_path) {
@@ -112,7 +161,7 @@ namespace engine {
 				rendering_server->canvas_item_set_z_index(canvas_item, sublayer_id);
 				draw_layer.sublayers[sublayer_id].linked_canvas_item = canvas_item;
 			}
-			DrawSubLayer& draw_sublayer = draw_layer.sublayers[sublayer_id];
+			DrawSublayer& draw_sublayer = draw_layer.sublayers[sublayer_id];
 			in_sublayer.is_present = true;
 			in_sublayer.multimesh_id = draw_sublayer.multimeshes.size();
 			draw_sublayer.multimeshes.emplace_back();
@@ -130,11 +179,12 @@ namespace engine {
 			return in_sublayer.multimesh_id;
 		}
 
-		DrawElementId add_to_multimesh(uint32_t layer_id, uint32_t sublayer_id, DrawElementId multimesh_id, Vector2f pos, Vector2f size) {
+		DrawElementId add_to_multimesh(uint32_t layer_id, uint32_t sublayer_id, DrawElementId multimesh_id, Vector2Chunks pos_chunks, Vector2Unitsf pos_units, Vector2Unitsf size) {
 			DrawLayer& draw_layer = draw_layers[layer_id];
-			DrawSubLayer& draw_sublayer = draw_layer.sublayers[sublayer_id];
+			DrawSublayer& draw_sublayer = draw_layer.sublayers[sublayer_id];
 			DrawMultimesh& multimesh = draw_sublayer.multimeshes[multimesh_id];
 			DrawElementId element_id;
+			bool is_world = draw_layer.is_world;
 			if (multimesh.free_elements.size() > 0) {
 				element_id = multimesh.free_elements.back();
 				multimesh.free_elements.pop_back();
@@ -159,7 +209,13 @@ namespace engine {
 				multimesh.element_ids.push_back(element_id);
 			}
 			godot::Transform2D transform;
-			Vector2f origin = pos + size / 2;
+
+			Vector2Unitsf origin = pos_units + size / 2;
+			if (is_world) {
+				Vector2Chunks chunk_offset_chunks = pos_chunks - camera_pos_chunks;
+				Vector2Unitsf chunk_offset_units = static_cast<Vector2Unitsf>(chunk_offset_chunks * chunk_size_units);
+				origin += chunk_offset_units;
+			}
 			transform.set_origin(godot::Vector2(origin.x + 0x1p-5f, origin.y + 0x1p-5f));
 			transform.set_scale(godot::Size2(size.x + 0x1p-4, size.y + 0x1p-4));
 
@@ -173,15 +229,22 @@ namespace engine {
 			return element_id;
 		}
 
-		void edit_in_multimesh(uint32_t layer_id, uint32_t sublayer_id, DrawElementId multimesh_id, DrawElementId element_id, Vector2f pos, Vector2f size) {
+		void edit_in_multimesh(uint32_t layer_id, uint32_t sublayer_id, DrawElementId multimesh_id, DrawElementId element_id, Vector2Chunks pos_chunks, Vector2Unitsf pos_units, Vector2f size) {
 			DrawLayer& draw_layer = draw_layers[layer_id];
-			DrawSubLayer& draw_sublayer = draw_layer.sublayers[sublayer_id];
+			DrawSublayer& draw_sublayer = draw_layer.sublayers[sublayer_id];
 			DrawMultimesh& multimesh = draw_sublayer.multimeshes[multimesh_id];
+			bool is_world = draw_layer.is_world;
 
 			DrawElementId buffer_id = multimesh.buffer_ids[element_id];
 
 			godot::Transform2D transform;
-			Vector2f origin = pos + size / 2;
+
+			Vector2Unitsf origin = pos_units + size / 2;
+			if (is_world) {
+				Vector2Chunks chunk_offset_chunks = pos_chunks - camera_pos_chunks;
+				Vector2Unitsf chunk_offset_units = static_cast<Vector2Unitsf>(chunk_offset_chunks * chunk_size_units);
+				origin += chunk_offset_units;
+			}
 			transform.set_origin(godot::Vector2(origin.x + 0x1p-5f, origin.y + 0x1p-5f));
 			transform.set_scale(godot::Size2(size.x + 0x1p-4, size.y + 0x1p-4));
 
@@ -190,7 +253,7 @@ namespace engine {
 
 		void delete_from_multimesh(uint32_t layer_id, uint32_t sublayer_id, DrawElementId multimesh_id, DrawElementId element_id) {
 			DrawLayer& draw_layer = draw_layers[layer_id];
-			DrawSubLayer& draw_sublayer = draw_layer.sublayers[sublayer_id];
+			DrawSublayer& draw_sublayer = draw_layer.sublayers[sublayer_id];
 			DrawMultimesh& multimesh = draw_sublayer.multimeshes[multimesh_id];
 
 			DrawElementId buffer_id = multimesh.buffer_ids[element_id];
@@ -222,11 +285,11 @@ namespace engine {
 		DrawElementId get_multimesh_id(uint32_t layer_id, uint32_t sublayer_id, TextureId texture_id) {
 			return GraphicsManager::instance.get_multimesh_id(layer_id, sublayer_id, texture_id);
 		};
-		DrawElementId add_to_multimesh(uint32_t layer_id, uint32_t sublayer_id, DrawElementId multimesh_id, Vector2f pos, Vector2f size) {
-			return GraphicsManager::instance.add_to_multimesh(layer_id, sublayer_id, multimesh_id, pos, size);
+		DrawElementId add_to_multimesh(uint32_t layer_id, uint32_t sublayer_id, DrawElementId multimesh_id, Vector2Chunks pos_chunks, Vector2Unitsf pos_units, Vector2Unitsf size) {
+			return GraphicsManager::instance.add_to_multimesh(layer_id, sublayer_id, multimesh_id, pos_chunks, pos_units, size);
 		};
-		void edit_in_multimesh(uint32_t layer_id, uint32_t sublayer_id, DrawElementId multimesh_id, DrawElementId element_id, Vector2f pos, Vector2f size) {
-			GraphicsManager::instance.edit_in_multimesh(layer_id, sublayer_id, multimesh_id, element_id, pos, size);
+		void edit_in_multimesh(uint32_t layer_id, uint32_t sublayer_id, DrawElementId multimesh_id, DrawElementId element_id, Vector2Chunks pos_chunks, Vector2Unitsf pos_units, Vector2Unitsf size) {
+			GraphicsManager::instance.edit_in_multimesh(layer_id, sublayer_id, multimesh_id, element_id, pos_chunks, pos_units, size);
 		};
 		void delete_from_multimesh(uint32_t layer_id, uint32_t sublayer_id, DrawElementId multimesh_id, DrawElementId element_id) {
 			GraphicsManager::instance.delete_from_multimesh(layer_id, sublayer_id, multimesh_id, element_id);
