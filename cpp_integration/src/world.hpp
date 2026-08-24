@@ -7,6 +7,10 @@
 namespace engine {
 
 	typedef uint32_t ObjectDescriptorId;
+	typedef uint32_t EntityChunkId;
+	typedef uint32_t EntytyRunningId;
+
+	constexpr Seconds entity_idle_timeout = 3;
 
 	struct Chunk;
 	struct Dimension;
@@ -21,14 +25,17 @@ namespace engine {
 	struct Block;
 	struct BlockDescriptor;
 
+	struct Entity;
+	struct EntityDescriptor;
+
 	namespace bullshit {
 		void register_descriptor(ObjectDescriptor* descriptor);
 	}
 
 	struct Chunk {
-		Dimension* dimension;
+		Dimension* const dimension;
 
-		Vector2Chunks pos_chunks;
+		const Vector2Chunks pos_chunks;
 
 		bool data_initialised = false;
 		bool graphics_initialised = false;
@@ -45,6 +52,7 @@ namespace engine {
 
 		ChunkMatrix<Tile*> floor_tiles;
 		ChunkMatrix<Block*> blocks;
+		PersistentContainer<Entity*, EntityChunkId> entities;
 
 		Chunk(Dimension* dimension, Vector2Chunks pos_chunks) : dimension(dimension), pos_chunks(pos_chunks) {}
 
@@ -61,12 +69,14 @@ namespace engine {
 	};
 
 	struct Dimension {
-		std::string name;
+		const std::string name;
 
 		std::vector<Chunk*> loaded_chunks;
 
 		std::vector<Chunk*> process_running_chunks;
 		std::vector<Chunk*> graphic_running_chunks;
+
+		PersistentContainer<Entity*, EntytyRunningId> running_entities;
 
 		TileDescriptor* default_ground;
 
@@ -75,6 +85,7 @@ namespace engine {
 		virtual void perform_process(Seconds delta);
 		Chunk* get_chunk(Vector2Chunks pos_chunks);
 		Chunk* get_load_chunk(Vector2Chunks pos_chunks);
+		Chunk* get_load_chunk_initialised(Vector2Chunks pos_chunks);
 		Chunk* load_chunk(Vector2Chunks pos_chunks);
 		bool try_read_chunk(Chunk* chunk);
 		virtual void generate_chunk(Chunk* chunk);
@@ -82,6 +93,10 @@ namespace engine {
 		void start_graphics(Chunk* chunk);
 		void end_process(Chunk* chunk);
 		void end_graphics(Chunk* chunk);
+		void start_process(Entity* entity);
+		void start_graphics(Entity* entity);
+		void end_process(Entity* entity);
+		void end_graphics(Entity* entity);
 	};
 
 	struct LoadZone {
@@ -94,6 +109,16 @@ namespace engine {
 		LoadZone(bool run_graphics, Dimension* dimension, std::span<Vector2Chunks> running_chunks_pos) : run_graphics(run_graphics), dimension(dimension) {
 			set_running_chunks(running_chunks_pos);
 		}
+
+		template <bool run_graphics>
+		static void chunk_incref(Dimension* dimension, Chunk* chunk);
+		template <bool run_graphics>
+		static void chunk_decref(Dimension* dimension, Chunk* chunk);
+
+		template <bool run_graphics>
+		static void chunk_incref(Chunk* chunk);
+		template <bool run_graphics>
+		static void chunk_decref(Chunk* chunk);
 
 		void set_running_chunks(std::span<Vector2Chunks> new_running_chunks_pos);
 		template <bool run_graphics_const>
@@ -147,6 +172,48 @@ namespace engine {
 		using ObjectDescriptor::ObjectDescriptor;
 
 		virtual Block* make_object(Chunk* linked_chunk, Vector2Blocks pos_blocks) = 0;
+	};
+
+	struct Entity {
+		constexpr static CoordinateChunks maximum_stepping_distance = 3;
+
+		EntityDescriptor* descriptor_raw;
+		Vector2Unitsf pos_units;
+		Chunk* linked_chunk;
+		bool data_initialised = false;
+		bool graphics_initialised = false;
+		bool process_running = false;
+		bool graphics_running = false;
+		Seconds sleep_counter = 0;
+		EntityChunkId entity_chunk_id;
+		EntytyRunningId entity_running_id;
+
+		Entity(Chunk* linked_chunk, Vector2Unitsf pos_units, EntityDescriptor* descriptor) : descriptor_raw(descriptor), pos_units(pos_units), linked_chunk(linked_chunk) {
+			pre_initialise();
+			initialise();
+		}
+
+		void mark_alive() {
+			sleep_counter = 0;
+		}
+
+		void mark_idle() {
+			sleep_counter = entity_idle_timeout;
+		}
+		
+		void start_process();
+		void move_by(Vector2Unitsf distance_units);
+		virtual void move_to(Vector2Chunks pos_chunks, Vector2Unitsf pos_units);
+
+		virtual void process(Seconds delta);
+		virtual void pre_initialise();
+		virtual void initialise();
+		virtual void initialise_data();
+		virtual void enable_data_process();
+		virtual void disable_data_process();
+		virtual void enable_graphics();
+		virtual void disable_graphics();
+		virtual void initialise_graphics();
 	};
 
 	// CHUNK DEFINITION START
@@ -290,7 +357,14 @@ namespace engine {
 			chunk->perform_block_process(delta);
 		}
 		for (Chunk* chunk : graphic_running_chunks) {
-			chunk->perform_block_process(delta);
+			chunk->perform_render_process(delta);
+		}
+		for (Entity* entity : running_entities.snapshot()) {
+			entity->sleep_counter += delta;
+			entity->process(delta);
+			if (entity->sleep_counter >= entity_idle_timeout) {
+				end_process(entity);
+			}
 		}
 	}
 
@@ -310,6 +384,14 @@ namespace engine {
 			}
 		}
 		return load_chunk(pos_chunks);
+	}
+
+	Chunk* Dimension::get_load_chunk_initialised(Vector2Chunks pos_chunks) {
+		Chunk* chunk = get_load_chunk(pos_chunks);
+		if (not chunk->data_initialised) {
+			chunk->initialise_data();
+		}
+		return chunk;
 	}
 
 	Chunk* Dimension::load_chunk(Vector2Chunks pos_chunks) {
@@ -336,6 +418,7 @@ namespace engine {
 			chunk->initialise_data();
 		}
 		chunk->enable_data_process();
+		chunk->process_running = true;
 		process_running_chunks.push_back(chunk);
 	}
 
@@ -344,22 +427,85 @@ namespace engine {
 			chunk->initialise_graphics();
 		}
 		chunk->enable_graphics();
+		chunk->graphics_running = true;
 		graphic_running_chunks.push_back(chunk);
 	}
 
 	void Dimension::end_process(Chunk* chunk) {
 		chunk->disable_data_process();
+		chunk->process_running = false;
 		std::erase(process_running_chunks, chunk);
 	}
 
 	void Dimension::end_graphics(Chunk* chunk) {
 		chunk->disable_graphics();
+		chunk->graphics_running = false;
 		std::erase(graphic_running_chunks, chunk);
+	}
+
+	void Dimension::start_process(Entity* entity) {
+		if (not entity->data_initialised) {
+			entity->initialise_data();
+		}
+		entity->enable_data_process();
+		entity->process_running = true;
+		entity->entity_running_id = running_entities.add_element(entity);
+	}
+
+	void Dimension::start_graphics(Entity* entity) {
+		if (not entity->graphics_initialised) {
+			entity->initialise_graphics();
+		}
+		entity->enable_graphics();
+		entity->graphics_running = true;
+	}
+
+	void Dimension::end_process(Entity* entity) {
+		entity->disable_data_process();
+		entity->process_running = false;
+		running_entities.delete_element(entity->entity_running_id);
+	}
+
+	void Dimension::end_graphics(Entity* entity) {
+		entity->disable_graphics();
+		entity->graphics_running = false;
 	}
 
 	// DIMENSION DEFINITION END
 
 	// LOADZONE DEFINITION START
+
+	template <bool run_graphics>
+	inline void LoadZone::chunk_incref(Dimension* dimension, Chunk* chunk) {
+		if (++(chunk->loading_process) == 1) {
+			dimension->start_process(chunk);
+		}
+		if constexpr (run_graphics) {
+			if (++(chunk->loading_graphics) == 1) {
+				dimension->start_graphics(chunk);
+			}
+		}
+	}
+	template <bool run_graphics>
+	inline void LoadZone::chunk_decref(Dimension* dimension, Chunk* chunk) {
+		if constexpr (run_graphics) {
+			if (--(chunk->loading_graphics) == 0) {
+				dimension->end_graphics(chunk);
+			}
+		}
+		if (--(chunk->loading_process) == 0) {
+			dimension->end_process(chunk);
+		}
+	}
+
+	template <bool run_graphics>
+	inline void LoadZone::chunk_incref(Chunk* chunk) {
+		chunk_incref<run_graphics>(chunk->dimension, chunk);
+	}
+	template <bool run_graphics>
+	inline void LoadZone::chunk_decref(Chunk* chunk) {
+		chunk_decref<run_graphics>(chunk->dimension, chunk);
+	}
 
 	void LoadZone::set_running_chunks(std::span<Vector2Chunks> new_running_chunks_pos) {
 		if (run_graphics) {
@@ -380,27 +526,13 @@ namespace engine {
 
 		for (Chunk* chunk : running_chunks) {
 			if (not can_find_in_vec(new_running_chunks, chunk)) {
-				if constexpr (run_graphics_const) {
-					if (--(chunk->loading_graphics) == 0) {
-						dimension->end_graphics(chunk);
-					}
-				}
-				if (--(chunk->loading_process) == 0) {
-					dimension->end_process(chunk);
-				}
+				this->chunk_decref<run_graphics_const>(dimension, chunk);
 			}
 		}
 
 		for (Chunk* chunk : new_running_chunks) {
 			if (not can_find_in_vec(running_chunks, chunk)) {
-				if (++(chunk->loading_process) == 1) {
-					dimension->start_process(chunk);
-				}
-				if constexpr (run_graphics_const) {
-					if (++(chunk->loading_graphics) == 1) {
-						dimension->start_graphics(chunk);
-					}
-				}
+				this->chunk_incref<run_graphics_const>(dimension, chunk);
 			}
 		}
 		running_chunks = new_running_chunks;
@@ -457,6 +589,99 @@ namespace engine {
 
 	// WORLDOBJECT DEFINITION END
 
+	// ENTITY DEFINITION START
+
+	void Entity::start_process() {
+		linked_chunk->dimension->start_process(this);
+	}
+
+	void Entity::move_by(Vector2Unitsf distance_units) {
+		auto [pos_chunks, pos_units] = snap_to_chunk(this->pos_units + distance_units);
+		move_to(linked_chunk->pos_chunks + pos_chunks, pos_units);
+	}
+
+	void Entity::move_to(Vector2Chunks pos_chunks, Vector2Unitsf pos_units) {
+		Vector2Chunks cur_pos_chunks = linked_chunk->pos_chunks;
+		Vector2Chunks diff_chunks = pos_chunks - cur_pos_chunks;
+		if (not diff_chunks.is_zero()) {
+			Chunk* current_chunk;
+			if (diff_chunks.get_abs().sum() <= maximum_stepping_distance) {
+				Vector2Chunks dif_abs = diff_chunks.get_abs();
+				current_chunk = linked_chunk;
+				Direction direction = diff_chunks.x > 0 ? RIGHT : LEFT;
+				for (uint32_t x_step = 0; x_step < dif_abs.x; ++x_step) {
+					current_chunk = current_chunk->neighbours[direction];
+					if (current_chunk == nullptr) {
+						break;
+					}
+				}
+				if (current_chunk != nullptr) {
+					direction = diff_chunks.y > 0 ? TOP : BOTTOM;
+					for (uint32_t y_step = 0; y_step < dif_abs.y; ++y_step) {
+						current_chunk = current_chunk->neighbours[direction];
+						if (current_chunk == nullptr) {
+							current_chunk = linked_chunk->dimension->get_load_chunk_initialised(pos_chunks);
+							break;
+						}
+					}
+				}
+				else {
+					current_chunk = linked_chunk->dimension->get_load_chunk_initialised(pos_chunks);
+				}
+			}
+			else {
+				current_chunk = linked_chunk->dimension->get_load_chunk_initialised(pos_chunks);
+			}
+			Chunk* old_chunk = linked_chunk;
+			linked_chunk = current_chunk;
+
+			old_chunk->entities.delete_element(entity_chunk_id);
+			entity_chunk_id = current_chunk->entities.add_element(this);
+
+			LoadZone::chunk_incref<false>(current_chunk);
+			LoadZone::chunk_decref<false>(old_chunk);
+		}
+		this->pos_units = pos_units;
+	}
+
+	void Entity::pre_initialise() {
+		entity_chunk_id = linked_chunk->entities.add_element(this);
+		LoadZone::chunk_incref<false>(linked_chunk);
+	}
+
+	void Entity::process(Seconds delta) {
+		mark_idle();
+	}
+
+	void Entity::initialise() {
+
+	}
+
+	void Entity::initialise_data() {
+
+	}
+
+	void Entity::enable_data_process() {
+
+	}
+
+	void Entity::disable_data_process() {
+
+	}
+
+	void Entity::enable_graphics() {
+
+	}
+
+	void Entity::disable_graphics() {
+
+	}
+
+	void Entity::initialise_graphics() {
+
+	}
+
+	// ENTITY DEFINITION END
 
 	// SIDE CLASSES EFINITIONS
 

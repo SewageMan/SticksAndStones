@@ -30,12 +30,27 @@
 #include <cstdint>
 #include <ciso646>
 #include <bit>
+#include <camera.hpp>
 
 #define NARROW_DESCRIPTOR(type) \
     type* descriptor() { return static_cast<type*>(descriptor_raw); } \
     const type* descriptor() const { return static_cast<const type*>(descriptor_raw); }
 
+#if defined(_M_X64) || defined(__x86_64__) || defined(_M_IX86) || defined(__i386__)
+#include <xmmintrin.h>
+#include <pmmintrin.h>
+#define ENGINE_X86
+#endif
+
+
 namespace engine {
+
+	void enable_fast_math_hardware_modes() {
+#if defined(ENGINE_X86)
+		_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+		_MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
+#endif
+	}
 
 	enum Direction {
 		TOP = 0,
@@ -49,7 +64,7 @@ namespace engine {
 
 	typedef uint32_t RefCounter;
 
-	typedef double Seconds;
+	typedef float Seconds;
 
 	typedef int32_t CoordinateChunks;
 	typedef int32_t CoordinateBlocks;
@@ -79,6 +94,15 @@ namespace engine {
 		Vector2Chunks chunk_pos = static_cast<Vector2Chunks>((global_coords / chunk_size_units).get_floor());
 
 		Vector2Unitsf unit_pos = static_cast<Vector2Unitsf>(global_coords - chunk_pos * chunk_size_units);
+
+		return { chunk_pos, unit_pos };
+	}
+
+	std::pair<Vector2Chunks, Vector2Unitsf> snap_to_chunk(Vector2Unitsf initial_coords) {
+
+		Vector2Chunks chunk_pos = static_cast<Vector2Chunks>((initial_coords / chunk_size_units).get_floor());
+
+		Vector2Unitsf unit_pos = static_cast<Vector2Unitsf>(initial_coords - chunk_pos * chunk_size_units);
 
 		return { chunk_pos, unit_pos };
 	}

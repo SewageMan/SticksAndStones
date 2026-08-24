@@ -30,6 +30,8 @@ namespace engine {
 
 		void initialise() {
 
+			enable_fast_math_hardware_modes();
+
 			textures::test = Texture("res://loser-city-enjoyer-v0-mph9c839dstd1.webp");
 
 			tiles::test_ground = new SimpleTileDescriptor("test_ground", textures::test);

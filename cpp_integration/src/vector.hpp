@@ -7,6 +7,7 @@
 #include <vector>
 #include <concepts>
 #include <functional>
+#include <algorithm>
 
 
 namespace engine {
@@ -147,6 +148,18 @@ namespace engine {
 		void flip() {
 			x = -x;
 			y = -y;
+		}
+
+		T max() {
+			return std::max(x, y);
+		}
+
+		T min() {
+			return std::min(x, y);
+		}
+
+		T sum() {
+			return x + y;
 		}
 
 		auto normalised_cross(const Vector2<T> other) const {

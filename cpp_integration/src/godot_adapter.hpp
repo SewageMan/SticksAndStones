@@ -99,7 +99,7 @@ public:
         }
     }
 
-    void process(double delta) {
+    void process(engine::Seconds delta) {
 
         if (not valid_state) {
             on_invalid_check();

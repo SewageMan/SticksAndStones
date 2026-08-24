@@ -24,7 +24,7 @@ namespace engine {
 	struct DrawLayer {
 		godot::Node2D* main_node;
 		std::vector<DrawSublayer> sublayers;
-		bool is_world = false;
+		bool is_world;
 	};
 
 	struct TextureInSubLayer {
@@ -82,6 +82,7 @@ namespace engine {
 			draw_layers[PLAYER].is_world = true;
 			draw_layers[BLOCK_ABOVE].is_world = true;
 			draw_layers[ROOF].is_world = true;
+			draw_layers[BASIC_OVERLAY].is_world = false;
 
 			set_camera_pos({ 0,0 }, { 0, 0 });
 		}
