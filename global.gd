@@ -1,8 +1,10 @@
 extends Node
 
-const tile_size: int = 50
-const chunk_size_tiles: int = 10
-const chunk_size_units: int = chunk_size_tiles * tile_size
-const tiles_in_chunk: int = chunk_size_tiles * chunk_size_tiles
+const block_size: int = 32
+const chunk_size_units: int = 32
+
+const world_scale: int = 32
+
+var player: Player = null
 
 var cpp_core: CppGodotAdapter = null

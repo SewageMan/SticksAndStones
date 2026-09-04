@@ -28,13 +28,13 @@ namespace engine {
 		}
 
 		template <typename U>
-		auto get_len() const {
+		constexpr auto get_len() const {
 			U dx = static_cast<U>(x);
 			U dy = static_cast<U>(y);
 			return std::sqrt(dx * dx + dy * dy);
 		}
 
-		auto get_len() const {
+		constexpr auto get_len() const {
 			using FloatType = std::conditional_t<std::is_floating_point_v<T>, T, double>;
 			FloatType dx = static_cast<FloatType>(x);
 			FloatType dy = static_cast<FloatType>(y);
@@ -42,42 +42,42 @@ namespace engine {
 		}
 
 		template <typename U>
-		auto get_len2() const {
+		constexpr auto get_len2() const {
 			U dx = static_cast<U>(x);
 			U dy = static_cast<U>(y);
 			return dx * dx + dy * dy;
 		}
 
-		auto get_len2() const {
+		constexpr auto get_len2() const {
 			using FloatType = std::conditional_t<std::is_floating_point_v<T>, T, double>;
 			FloatType dx = static_cast<FloatType>(x);
 			FloatType dy = static_cast<FloatType>(y);
 			return dx * dx + dy * dy;
 		}
 
-		Vector2<T> get_normalize() const {
+		constexpr Vector2<T> get_normalize() const {
 			return (*this) / get_len();
 		}
 
-		void normalize() {
+		constexpr void normalize() {
 			(*this)/=get_len();
 		}
 
-		Vector2<T> with_len(all_nums auto len) const {
+		constexpr Vector2<T> with_len(all_nums auto len) const {
 			return (*this) * len / get_len();
 		}
 
-		void set_len(all_nums auto len) {
+		constexpr void set_len(all_nums auto len) {
 			(*this) *= len/get_len();
 		}
 
-		Vector2<T> get_rotate(all_nums auto angle) const {
+		constexpr Vector2<T> get_rotate(all_nums auto angle) const {
 			double sin_a = std::sin(angle);
 			double cos_a = std::cos(angle);
 			return Vector2<T>(x * cos_a - y * sin_a, x * sin_a + y * cos_a);
 		}
 
-		void rotate(all_nums auto angle) {
+		constexpr void rotate(all_nums auto angle) {
 			double sin_a = std::sin(angle);
 			double cos_a = std::cos(angle);
 			T old_x = x;
@@ -86,83 +86,83 @@ namespace engine {
 			y = old_x * sin_a + old_y * cos_a;
 		}
 
-		Vector2<T> get_rotate_around(const Vector2<T> center, all_nums auto angle) const {
+		constexpr Vector2<T> get_rotate_around(const Vector2<T> center, all_nums auto angle) const {
 			return ((*this) - center).get_rotate(angle) + center;
 		}
 
-		void rotate_around(const Vector2<T> center, all_nums auto angle) {
+		constexpr void rotate_around(const Vector2<T> center, all_nums auto angle) {
 			(*this) -= center;
 			(*this)->rotate(angle);
 			(*this) += center;
 		}
 
-		Vector2<T> get_rotate90() const {
+		constexpr Vector2<T> get_rotate90() const {
 			return Vector2<T>(-y, x);
 		}
 
-		Vector2<T> get_rotate180() const {
+		constexpr Vector2<T> get_rotate180() const {
 			return Vector2<T>(-x, -y);
 		}
 
-		Vector2<T> get_rotate270() const {
+		constexpr Vector2<T> get_rotate270() const {
 			return Vector2<T>(y, -x);
 		}
 
-		void rotate90() {
+		constexpr void rotate90() {
 			T old_x = x;
 			x = -y;
 			y = old_x;
 		}
 
-		void rotate180() {
+		constexpr void rotate180() {
 			x = -x;
 			y = -y;
 		}
 
-		void rotate270() {
+		constexpr void rotate270() {
 			T old_x = x;
 			x = y;
 			y = -old_x;
 		}
 
-		Vector2<T> get_flip_x() const {
+		constexpr Vector2<T> get_flip_x() const {
 			return Vector2<T>(-x, y);
 		}
 
-		Vector2<T> get_flip_y() const {
+		constexpr Vector2<T> get_flip_y() const {
 			return Vector2<T>(x, -y);
 		}
 
-		Vector2<T> get_flip() const {
+		constexpr Vector2<T> get_flip() const {
 			return Vector2<T>(-x, -y);
 		}
 
-		void flip_x() {
+		constexpr void flip_x() {
 			x = -x;
 		}
 
-		void flip_y() {
+		constexpr void flip_y() {
 			y = -y;
 		}
 
-		void flip() {
+		constexpr void flip() {
 			x = -x;
 			y = -y;
 		}
 
-		T max() {
+		constexpr T max() {
 			return std::max(x, y);
 		}
 
-		T min() {
+		constexpr T min() {
 			return std::min(x, y);
 		}
 
-		T sum() {
+		constexpr T sum() {
 			return x + y;
 		}
 
-		auto normalised_cross(const Vector2<T> other) const {
+		constexpr auto normalised_cross(const Vector2<T> other) const {
 			using FloatType = std::conditional_t<std::is_floating_point_v<T>, T, double>;
 			FloatType dx1 = static_cast<FloatType>(x);
 			FloatType dy1 = static_cast<FloatType>(y);
@@ -178,43 +178,43 @@ namespace engine {
 		}
 
 		template <typename U>
-		Vector2<U> get_discretize(all_nums auto step) const {
+		constexpr Vector2<U> get_discretize(all_nums auto step) const {
 			return Vector2<U>(std::floor(x / step), std::floor(y / step));
 		}
 
 		template <typename U>
-		void discretize(all_nums auto step) {
+		constexpr void discretize(all_nums auto step) {
 			x = std::floor(x / step);
 			y = std::floor(y / step);
 		}
 
-		auto get_distance_to(const Vector2<T> other) const {
+		constexpr auto get_distance_to(const Vector2<T> other) const {
 			return going_to(other).get_len();
 		}
 
-		auto get_distance2_to(const Vector2<T> other) const {
+		constexpr auto get_distance2_to(const Vector2<T> other) const {
 			return going_to(other).get_len2();
 		}
 
-		auto get_angle_to(const Vector2<T> other) const {
+		constexpr auto get_angle_to(const Vector2<T> other) const {
 			return std::atan2((*this) ^ other, (*this) * other);
 		}
 
-		auto get_angle() const {
+		constexpr auto get_angle() const {
 			return std::atan2(y, x);
 		}
 
-		Vector2<T> get_abs() const {
+		constexpr Vector2<T> get_abs() const {
 			return Vector2<T>(std::abs(x), std::abs(y));
 		}
 
-		void abs() {
+		constexpr void abs() {
 			x = std::abs(x);
 			y = std::abs(y);
 		}
 
 		template <typename U>
-		std::vector<Vector2<U>> range_to(const Vector2<T> other,all_nums auto step) const {
+		constexpr std::vector<Vector2<U>> range_to(const Vector2<T> other,all_nums auto step) const {
 			Vector2<U> start = static_cast<Vector2<U>>((*this).get_discretize<U>(step));
 			Vector2<U> end = static_cast<Vector2<U>>(other.get_discretize<U>(step));
 			Vector2<U> diff = start - end;
@@ -229,68 +229,68 @@ namespace engine {
 		}
 
 		template <typename U>
-		Range2<U> range_to_iter(const Vector2<T> other, all_nums auto step) const {
+		constexpr Range2<U> range_to_iter(const Vector2<T> other, all_nums auto step) const {
 			Vector2<U> start = static_cast<Vector2<U>>((*this).get_discretize<U>(step));
 			Vector2<U> end = static_cast<Vector2<U>>(other.get_discretize<U>(step));
 			return Range2<U>(start.x,start.y,end.x,end.y);
 		}
 
-		bool is_infinite() const {
+		constexpr bool is_infinite() const {
 			return std::isinf(x) or std::isinf(y);
 		}
 
-		bool is_zero() const {
+		constexpr bool is_zero() const {
 			return x == 0 and y == 0;
 		}
 
-		Vector2<T> get_round() const {
+		constexpr Vector2<T> get_round() const {
 			return Vector2<T>(std::round(x), std::round(y));
 		}
 
-		Vector2<T> get_floor() const {
+		constexpr Vector2<T> get_floor() const {
 			return Vector2<T>(std::floor(x), std::floor(y));
 		}
 
-		Vector2<T> get_ceil() const {
+		constexpr Vector2<T> get_ceil() const {
 			return Vector2<T>(std::ceil(x), std::ceil(y));
 		}
 
-		void round() {
+		constexpr void round() {
 			x = std::round(x);
 			y = std::round(y);
 		}
 
-		void floor() {
+		constexpr void floor() {
 			x = std::floor(x);
 			y = std::floor(y);
 		}
 
-		void ceil() {
+		constexpr void ceil() {
 			x = std::ceil(x);
 			y = std::ceil(y);
 		}
 
 		template<typename U>
-		Vector2<T> operator+=(const Vector2<U>& other) {
+		constexpr Vector2<T> operator+=(const Vector2<U> other) {
 			x += other.x;
 			y += other.y;
 			return *this;
 		}
 
 		template<typename U>
-		Vector2<T> operator-=(const Vector2<U>& other) {
+		constexpr Vector2<T> operator-=(const Vector2<U> other) {
 			x -= other.x;
 			y -= other.y;
 			return *this;
 		}
 
-		Vector2<T> operator*=(all_nums auto scalar) {
+		constexpr Vector2<T> operator*=(all_nums auto scalar) {
 			x *= scalar;
 			y *= scalar;
 			return *this;
 		}
 
-		Vector2<T> operator/=(all_nums auto scalar) {
+		constexpr Vector2<T> operator/=(all_nums auto scalar) {
 			x /= scalar;
 			y /= scalar;
 			return *this;
@@ -313,82 +313,82 @@ namespace engine {
 		}
 
 		template <typename S>
-		explicit Vector2(const Vector2<S> other) : x(static_cast<T>(other.x)), y(static_cast<T>(other.y)) {
+		constexpr explicit Vector2(const Vector2<S> other) : x(static_cast<T>(other.x)), y(static_cast<T>(other.y)) {
 		}
 	};
 
 	template<typename T, typename U>
-	inline auto operator+(const Vector2<T> lhs, const Vector2<U> rhs) {
+	constexpr inline auto operator+(const Vector2<T> lhs, const Vector2<U> rhs) {
 		using ResultType = decltype(lhs.x + rhs.x);
 		return Vector2<ResultType>(lhs.x + rhs.x, lhs.y + rhs.y);
 	}
 
 	template<typename T>
-	inline auto operator+(const Vector2<T> vec) {
+	constexpr inline auto operator+(const Vector2<T> vec) {
 		return Vector2<T>(vec.x, vec.y);
 	}
 
 	template<typename T, typename U>
-	inline auto operator-(const Vector2<T> lhs, const Vector2<U> rhs) {
+	constexpr inline auto operator-(const Vector2<T> lhs, const Vector2<U> rhs) {
 		using ResultType = decltype(lhs.x - rhs.x);
 		return Vector2<ResultType>(lhs.x - rhs.x, lhs.y - rhs.y);
 	}
 
 	template<typename T>
-	inline auto operator-(const Vector2<T> vec) {
+	constexpr inline auto operator-(const Vector2<T> vec) {
 		return Vector2<T>(-vec.x, -vec.y);
 	}
 
 	template<typename T, typename U>
-	inline auto operator^(const Vector2<T> lhs, const Vector2<U> rhs) {
+	constexpr inline auto operator^(const Vector2<T> lhs, const Vector2<U> rhs) {
 		return lhs.x * rhs.y - lhs.y * rhs.x;
 	}
 
 	template<typename T, typename U>
-	inline auto operator*(const Vector2<T> lhs, const Vector2<U> rhs) {
+	constexpr inline auto operator*(const Vector2<T> lhs, const Vector2<U> rhs) {
 		return lhs.x * rhs.x + lhs.y * rhs.y;
 	}
 
 	template<typename T, typename S>
-	inline auto operator*(const Vector2<T> vec, S scalar) {
+	constexpr inline auto operator*(const Vector2<T> vec, S scalar) {
 		using ResultType = decltype(vec.x* scalar);
 		return Vector2<ResultType>(vec.x * scalar, vec.y * scalar);
 	}
 
 	template<typename T, typename S>
-	inline auto operator*(S scalar, const Vector2<T> vec) {
+	constexpr inline auto operator*(S scalar, const Vector2<T> vec) {
 		using ResultType = decltype(vec.x* scalar);
 		return Vector2<ResultType>(vec.x * scalar, vec.y * scalar);
 	}
 
 	template<typename T, typename S>
-	inline auto operator/(const Vector2<T> vec, S scalar) {
+	constexpr inline auto operator/(const Vector2<T> vec, S scalar) {
 		using ResultType = decltype(vec.x / scalar);
 		return Vector2<ResultType>(vec.x / scalar, vec.y / scalar);
 	}
 
 	template<typename T, typename U>
-	inline auto operator==(const Vector2<T> lhs, const Vector2<U> rhs) {
+	constexpr inline auto operator==(const Vector2<T> lhs, const Vector2<U> rhs) {
 		return lhs.x == rhs.x and lhs.y == rhs.y;
 	}
 
 	template<typename T, typename U>
-	inline auto operator!=(const Vector2<T> lhs, const Vector2<U> rhs) {
+	constexpr inline auto operator!=(const Vector2<T> lhs, const Vector2<U> rhs) {
 		return lhs.x != rhs.x or lhs.y != rhs.y;
 	}
 
 	template <typename T, typename U>
-	inline Vector2<T> operator<<(const Vector2<T> vec, U shift_by) {
+	constexpr inline Vector2<T> operator<<(const Vector2<T> vec, U shift_by) {
 		return Vector2<T>(vec.x << shift_by, vec.y << shift_by);
 	}
 
 	template <typename T, typename U>
-	inline Vector2<T> operator>>(const Vector2<T> vec, U shift_by) {
+	constexpr inline Vector2<T> operator>>(const Vector2<T> vec, U shift_by) {
 		return Vector2<T>(vec.x >> shift_by, vec.y >> shift_by);
 	}
 
 	template <typename T>
-	inline std::ostream& operator<<(std::ostream& os, const Vector2<T> vec) {
+	constexpr inline std::ostream& operator<<(std::ostream& os, const Vector2<T> vec) {
 		os << vec.to_string();
 		return os;
 	}

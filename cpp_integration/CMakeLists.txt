@@ -9,9 +9,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include_directories(
     src
     godot-cpp/include
+    godot-cpp/gdextension
     godot-cpp/gen/include
 )
 
 # ‘иктивна€ цель, чтобы CMake не ругалс€, что нет исходников
 # ћожно оставить пустым, но некоторые версии VS требуют хот€ бы один файл
+
 add_executable(dummy dummy.cpp)

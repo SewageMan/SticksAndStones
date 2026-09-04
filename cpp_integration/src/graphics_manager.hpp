@@ -2,6 +2,7 @@
 
 #include <godot_helper.hpp>
 #include <texture.hpp>
+#include <event_bus.hpp>
 
 class CppCore;
 
@@ -59,6 +60,7 @@ namespace engine {
 
 		Vector2Unitsf camera_pos_units = { 0,0 };
 		Vector2Chunks camera_pos_chunks = { 0,0 };
+		float camera_zoom = 1;
 
 		godot::Camera2D* camera;
 
@@ -85,6 +87,7 @@ namespace engine {
 			draw_layers[BASIC_OVERLAY].is_world = false;
 
 			set_camera_pos({ 0,0 }, { 0, 0 });
+			set_camera_zoom(1);
 		}
 
 		void set_camera_pos(Vector2Chunks pos_chunks, Vector2Unitsf pos_units) {
@@ -108,14 +111,19 @@ namespace engine {
 						}
 					}
 				}
+				EventPackage payload;
+				payload.vector2i = chunks_diff;
+				bullshit::send(event_bus_ids::UPDATE_CAMERA_CHUNK, payload);
 			}
 			camera_pos_chunks = pos_chunks;
 			camera_pos_units = pos_units;
 			camera->set_position(godot::Vector2(pos_units.x, pos_units.y));
 		}
 
-		void set_camera_zoom(float scale) {
-			camera->set_zoom(godot::Vector2(scale, scale));
+		void set_camera_zoom(float new_zoom) {
+			camera_zoom = new_zoom;
+			new_zoom *= pixels_per_unit;
+			camera->set_zoom(godot::Vector2(new_zoom, new_zoom));
 		}
 
 		TextureId get_texture_id(std::string texture_path) {
@@ -282,18 +290,30 @@ namespace engine {
 	namespace bullshit {
 		TextureId get_texture_id(std::string texture_path) {
 			return GraphicsManager::instance.get_texture_id(texture_path);
-		};
+		}
 		DrawElementId get_multimesh_id(uint32_t layer_id, uint32_t sublayer_id, TextureId texture_id) {
 			return GraphicsManager::instance.get_multimesh_id(layer_id, sublayer_id, texture_id);
-		};
+		}
 		DrawElementId add_to_multimesh(uint32_t layer_id, uint32_t sublayer_id, DrawElementId multimesh_id, Vector2Chunks pos_chunks, Vector2Unitsf pos_units, Vector2Unitsf size) {
 			return GraphicsManager::instance.add_to_multimesh(layer_id, sublayer_id, multimesh_id, pos_chunks, pos_units, size);
-		};
+		}
 		void edit_in_multimesh(uint32_t layer_id, uint32_t sublayer_id, DrawElementId multimesh_id, DrawElementId element_id, Vector2Chunks pos_chunks, Vector2Unitsf pos_units, Vector2Unitsf size) {
 			GraphicsManager::instance.edit_in_multimesh(layer_id, sublayer_id, multimesh_id, element_id, pos_chunks, pos_units, size);
-		};
+		}
 		void delete_from_multimesh(uint32_t layer_id, uint32_t sublayer_id, DrawElementId multimesh_id, DrawElementId element_id) {
 			GraphicsManager::instance.delete_from_multimesh(layer_id, sublayer_id, multimesh_id, element_id);
-		};
+		}
+		Vector2Chunks get_camera_pos_chunks() {
+			return GraphicsManager::instance.camera_pos_chunks;
+		}
+		void set_camera_pos(Vector2Chunks pos_chunks, Vector2Unitsf pos_units) {
+			GraphicsManager::instance.set_camera_pos(pos_chunks, pos_units);
+		}
+		float get_camera_zoom() {
+			return GraphicsManager::instance.camera_zoom;
+		}
+		void set_camera_zoom(float new_zoom) {
+			GraphicsManager::instance.set_camera_zoom(new_zoom);
+		}
 	}
 }

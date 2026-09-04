@@ -1,12 +1,13 @@
 #pragma once
 
 #include <tiles/simple_tile.hpp>
+#include <player.hpp>
 
 class CppCore;
 
 namespace engine {
 
-	namespace dimensions {
+	namespace dimensions_n {
 		Dimension* overworld;
 	}
 
@@ -36,10 +37,14 @@ namespace engine {
 
 			tiles::test_ground = new SimpleTileDescriptor("test_ground", textures::test);
 
-			dimensions::overworld = new Dimension("overworld", tiles::test_ground);
-			add_dimension(dimensions::overworld);
+			dimensions_n::overworld = new Dimension("overworld", tiles::test_ground);
+			add_dimension(dimensions_n::overworld);
 
-			new LoadZoneArea(true, dimensions::overworld, {2,-1}, 2);
+			new LoadZoneArea(true, dimensions_n::overworld, {2,-1}, 2);
+
+			PlayerDescriptor* player_descriptor = new PlayerDescriptor();
+
+			Player* player = player_descriptor->make_entity(dimensions_n::overworld->get_load_chunk_initialised({ 0,0 }), { 0,0 });
 		}
 
 		void add_dimension(Dimension* dimension) {
@@ -51,8 +56,10 @@ namespace engine {
 			dimensions.push_back(dimension);
 		}
 
-		void perform_process(Seconds delta) {
-
+		void perform_process(Time delta) {
+			for (Dimension* dimension : dimensions) {
+				dimension->perform_process(delta);
+			}
 		}
 
 		static MainEngine instance;

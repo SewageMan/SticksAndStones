@@ -11,9 +11,31 @@ namespace godot {
         engine::ByteBuffer byte_buffer;
 
         static void _bind_methods() {
-            ClassDB::bind_method(D_METHOD("read_uint32"), &GodotByteBuffer::read_uint32);
+            ClassDB::bind_method(D_METHOD("write_bool", "value"), &GodotByteBuffer::write_bool);
+            ClassDB::bind_method(D_METHOD("read_bool"), &GodotByteBuffer::read_bool);
+            ClassDB::bind_method(D_METHOD("write_uint8", "value"), &GodotByteBuffer::write_uint8);
+            ClassDB::bind_method(D_METHOD("read_uint8"), &GodotByteBuffer::read_uint8);
             ClassDB::bind_method(D_METHOD("write_uint32", "value"), &GodotByteBuffer::write_uint32);
-            ClassDB::bind_method(D_METHOD("initialise", "size"), &GodotByteBuffer::initialise);
+            ClassDB::bind_method(D_METHOD("read_uint32"), &GodotByteBuffer::read_uint32);
+            ClassDB::bind_method(D_METHOD("write_int32", "value"), &GodotByteBuffer::write_int32);
+            ClassDB::bind_method(D_METHOD("read_int32"), &GodotByteBuffer::read_int32);
+            ClassDB::bind_method(D_METHOD("write_int64", "value"), &GodotByteBuffer::write_int64);
+            ClassDB::bind_method(D_METHOD("read_int64"), &GodotByteBuffer::read_int64);
+            ClassDB::bind_method(D_METHOD("write_float", "value"), &GodotByteBuffer::write_float);
+            ClassDB::bind_method(D_METHOD("read_float"), &GodotByteBuffer::read_float);
+            ClassDB::bind_method(D_METHOD("write_double", "value"), &GodotByteBuffer::write_double);
+            ClassDB::bind_method(D_METHOD("read_double"), &GodotByteBuffer::read_double);
+            ClassDB::bind_method(D_METHOD("write_string", "value"), &GodotByteBuffer::write_string);
+            ClassDB::bind_method(D_METHOD("read_string"), &GodotByteBuffer::read_string);
+            ClassDB::bind_method(D_METHOD("write_vector2f", "value"), &GodotByteBuffer::write_vector2f);
+            ClassDB::bind_method(D_METHOD("read_vector2f"), &GodotByteBuffer::read_vector2f);
+            ClassDB::bind_method(D_METHOD("write_vector2i", "value"), &GodotByteBuffer::write_vector2i);
+            ClassDB::bind_method(D_METHOD("read_vector2i"), &GodotByteBuffer::read_vector2i);
+            ClassDB::bind_method(D_METHOD("write_buffer", "buffer"), &GodotByteBuffer::write_buffer);
+            ClassDB::bind_method(D_METHOD("read_buffer"), &GodotByteBuffer::read_buffer);
+            ClassDB::bind_method(D_METHOD("reference_data", "buffer"), &GodotByteBuffer::reference_data);
+            ClassDB::bind_method(D_METHOD("dereference_data", "size", "offset"), &GodotByteBuffer::dereference_data, DEFVAL(0));
+            ClassDB::bind_method(D_METHOD("initialise", "size", "offset", "allow_resize"), &GodotByteBuffer::initialise, DEFVAL(0), DEFVAL(0), DEFVAL(false));
             ClassDB::bind_method(D_METHOD("copy"), &GodotByteBuffer::copy);
             ClassDB::bind_method(D_METHOD("copy_from", "other"), &GodotByteBuffer::copy_from);
             ClassDB::bind_method(D_METHOD("shallow_copy_from", "other"), &GodotByteBuffer::shallow_copy_from);
@@ -32,9 +54,25 @@ namespace godot {
             ClassDB::bind_static_method("GodotByteBuffer", D_METHOD("allocate"), &GodotByteBuffer::allocate_godot_byte_buffer);
         }
 
-        int64_t read_uint32() {
-            uint32_t result;
-            byte_buffer.read<uint32_t>(result);
+        void write_bool(bool value) {
+            bool typed_value = value;
+            byte_buffer.write<bool>(typed_value);
+        }
+
+        bool read_bool() {
+            bool result;
+            byte_buffer.read<bool>(result);
+            return result;
+        }
+
+        void write_uint8(uint64_t value) {
+            uint8_t typed_value = value;
+            byte_buffer.write<uint8_t>(typed_value);
+        }
+
+        int64_t read_uint8() {
+            uint8_t result;
+            byte_buffer.read<uint8_t>(result);
             return result;
         }
 
@@ -43,12 +81,122 @@ namespace godot {
             byte_buffer.write<uint32_t>(typed_value);
         }
 
-        void initialise(int64_t size) {
+        int64_t read_uint32() {
+            uint32_t result;
+            byte_buffer.read<uint32_t>(result);
+            return result;
+        }
+
+        void write_int32(int64_t value) {
+            int32_t typed_value = value;
+            byte_buffer.write<int32_t>(typed_value);
+        }
+
+        int64_t read_int32() {
+            int32_t result;
+            byte_buffer.read<int32_t>(result);
+            return result;
+        }
+
+        void write_int64(int64_t value) {
+            int64_t typed_value = value;
+            byte_buffer.write<int64_t>(typed_value);
+        }
+
+        int64_t read_int64() {
+            int64_t result;
+            byte_buffer.read<int64_t>(result);
+            return result;
+        }
+
+        void write_vector2f(Vector2 value) {
+            engine::Vector2f typed_value = { value.x, value.y };
+            byte_buffer.write<engine::Vector2f>(typed_value);
+        }
+
+        void write_float(float value) {
+            float typed_value = value;
+            byte_buffer.write<float>(typed_value);
+        }
+
+        float read_float() {
+            float result;
+            byte_buffer.read<float>(result);
+            return result;
+        }
+
+        void write_double(double value) {
+            double typed_value = value;
+            byte_buffer.write<double>(typed_value);
+        }
+
+        double read_double() {
+            double result;
+            byte_buffer.read<double>(result);
+            return result;
+        }
+
+        String read_string() {
+            uint32_t len = read_uint32();
+
+            PackedByteArray data;
+            data.resize(len);
+            byte_buffer.read_bytes(data.ptrw(), len);
+
+            return String::utf8((const char*)data.ptr(), len);
+        }
+
+        void write_string(const String& value) {
+            PackedByteArray utf8 = value.to_utf8_buffer();
+            uint32_t len = utf8.size();
+
+            write_uint32(len);
+
+            byte_buffer.write_bytes(utf8.ptr(), len);
+        }
+
+        Vector2 read_vector2f() {
+            engine::Vector2f result;
+            byte_buffer.read<engine::Vector2f>(result);
+            return Vector2(result.x, result.y);
+        }
+
+        void write_vector2i(Vector2i value) {
+            engine::Vector2i typed_value = { value.x, value.y };
+            byte_buffer.write<engine::Vector2i>(typed_value);
+        }
+
+        Vector2i read_vector2i() {
+            engine::Vector2i result;
+            byte_buffer.read<engine::Vector2i>(result);
+            return Vector2i(result.x, result.y);
+        }
+
+        void write_buffer(GodotByteBuffer* buffer) {
+            byte_buffer.write<engine::ByteBuffer>(buffer->byte_buffer);
+        }
+
+        GodotByteBuffer* read_buffer() {
+            GodotByteBuffer* buffer = allocate_godot_byte_buffer();
+            byte_buffer.read<engine::ByteBuffer>(buffer->byte_buffer);
+            return buffer;
+        }
+
+        void initialise(int64_t size, int64_t offset, bool allow_resize) {
             if (size < 0) {
                 engine::panic("size cannot be negative");
             }
-            engine::print(size);
-            byte_buffer.initialise(size);
+            byte_buffer.initialise(size, offset, allow_resize or size == 0);
+        }
+
+        void reference_data(GodotByteBuffer* buffer) {
+            byte_buffer.reference_data(buffer->byte_buffer);
+        }
+
+        GodotByteBuffer* dereference_data(int64_t size, int64_t offset) {
+            GodotByteBuffer* buffer = allocate_godot_byte_buffer();
+            byte_buffer.dereference_data(buffer->byte_buffer, size, offset);
+            return buffer;
         }
 
         GodotByteBuffer* copy() const {

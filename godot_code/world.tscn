@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://cie0job0dbkc6"]
+[gd_scene load_steps=3 format=3 uid="uid://cie0job0dbkc6"]
 
 [ext_resource type="Script" path="res://godot_code/world.gd" id="1_mh7w4"]
+[ext_resource type="PackedScene" uid="uid://dqp5n7y1xtpiy" path="res://godot_code/player/Player.tscn" id="2_avkvu"]
 
 [node name="World" type="Node2D"]
 script = ExtResource("1_mh7w4")
@@ -15,6 +16,12 @@ z_index = 1
 [node name="player_layer_node" type="Node2D" parent="."]
 unique_name_in_owner = true
 z_index = 2
+
+[node name="player_scaling_down" type="Node2D" parent="player_layer_node"]
+scale = Vector2(0.031, 0.031)
+
+[node name="Player" parent="player_layer_node/player_scaling_down" instance=ExtResource("2_avkvu")]
+unique_name_in_owner = true
 
 [node name="objects_layer_above_node" type="Node2D" parent="."]
 unique_name_in_owner = true

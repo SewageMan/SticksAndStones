@@ -10,6 +10,6 @@ namespace engine {
 	typedef size_t BlockProcessId;
 
 	struct Process {
-		virtual void perform_process(Seconds delta) = 0;
+		virtual void perform_process(Time delta) = 0;
 	};
 }

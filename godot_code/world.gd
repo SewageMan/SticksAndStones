@@ -7,13 +7,31 @@ func _ready() -> void:
 	Global.cpp_core = cpp_core
 	cpp_core.initialise(%floor_layer_node, %objects_layer_below_node, %player_layer_node, %objects_layer_above_node, %roof_layer_node, %player_basic_overlay, %world_camera)
 
-	var thing = TestEventBus.new()
+	%Player.on_cpp_ready()
+
 	var buffer: GodotByteBuffer = GodotByteBuffer.allocate()
-	buffer.initialise(Global.cpp_core.get_payload_size())
-	buffer.print_out()
-	buffer.write_uint32(5)
-	thing.send(0, buffer)
-	print(thing.channel_ids, thing.bus_ids)
+
+	#var thing = TestEventBus.new()
+	#buffer.initialise(Global.cpp_core.get_payload_size())
+	#buffer.print_out()
+	#buffer.write_uint32(5)
+	#thing.send(0, buffer)
+	#print(thing.channel_ids, thing.bus_ids)
+
+	buffer.clear()
+	buffer.initialise()
+	buffer.write_string("whenametuinasama")
+
+	var buffer2: GodotByteBuffer = GodotByteBuffer.allocate()
+	buffer2.initialise(16)
+	buffer2.write_buffer(buffer)
+
+	buffer2.set_offset(0)
+	var buffer3: GodotByteBuffer = buffer2.read_buffer()
+
+	var res: String = buffer3.read_string()
+
+	print(res)
 
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.

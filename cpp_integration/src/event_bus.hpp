@@ -1,6 +1,7 @@
 #pragma once
 
 #include <helper.hpp>
+#include <event_bus_ids.hpp>
 
 namespace engine {
 
@@ -20,6 +21,8 @@ namespace engine {
 		Vector2i vector2i;
 		Vector2f vector2f;
 		void* pointer;
+
+		EventPackage() {}
 	};
 
 	namespace bullshit {

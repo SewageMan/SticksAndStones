@@ -31,6 +31,7 @@
 #include <ciso646>
 #include <bit>
 #include <camera.hpp>
+#include <units.hpp>
 
 #define NARROW_DESCRIPTOR(type) \
     type* descriptor() { return static_cast<type*>(descriptor_raw); } \
@@ -53,9 +54,9 @@ namespace engine {
 	}
 
 	enum Direction {
-		TOP = 0,
+		UP = 0,
 		RIGHT = 1,
-		BOTTOM = 2,
+		DOWN = 2,
 		LEFT = 3
 	};
 
@@ -64,28 +65,28 @@ namespace engine {
 
 	typedef uint32_t RefCounter;
 
-	typedef float Seconds;
+	typedef float Health;    // rabge 0 - +inf, how much a given object has health, material independend, depends on volume and object type.
+	typedef float Toughness; // range 0 - +inf, how much material is resisting damage, all damage is divided by this for a iven material.
+	typedef float Hardness;  // range 0 - 1, small values mean soft material, high values mean hard material, softer material damages less on collsiion and slows down gradualy.
+
+	// how big is one chunk in units (and blocks, 1 block = 1 unit = 1 meter)
+	constexpr int32_t chunk_size_units = 32;
+	constexpr float chunk_size_unitsf = 32.0f;
+
+	// how much we upscale the world on rendering to make one unit/block/meter look as if it is N pixels in size
+	constexpr float pixels_per_unit = 32;
 
 	typedef int32_t CoordinateChunks;
-	typedef int32_t CoordinateBlocks;
 	typedef int32_t CoordinateUnits;
 	typedef float CoordinateUnitsf;
 	typedef double CoordinateGlobal;
 	typedef Vector2<CoordinateChunks> Vector2Chunks;    // used to store position/size in chunk grid units
-	typedef Vector2<CoordinateBlocks> Vector2Blocks;    // used to store position/size in block grid units
-	typedef Vector2<CoordinateUnits> Vector2Units;      // used to store position/size in pixel grid units
+	typedef Vector2<CoordinateUnits> Vector2Units;      // used to store position/size in block grid units
 	typedef Vector2<CoordinateUnitsf> Vector2Unitsf;
 	typedef Vector2<CoordinateGlobal> Vector2Global;    // used to store position/size in pixel grid units in global coordinates
 
-	constexpr CoordinateUnits block_size = 32; // how big is one block in pixels
-	constexpr CoordinateUnitsf block_sizef = 32;
-	constexpr CoordinateBlocks chunk_size_blocks = 32;  // how big is one chunk in blocks
-	constexpr CoordinateUnits chunk_size_units = chunk_size_blocks * block_size;  // how big is one chunk in pixels
-
-	constexpr Vector2Units block_size_vec = Vector2Units(block_size, block_size);
-
 	template<typename T>
-	using ChunkMatrix = Matrix2D<T,chunk_size_blocks,chunk_size_blocks>;  // ChunkMatrix[x][y] is correct indexing order
+	using ChunkMatrix = Matrix2D<T, chunk_size_units, chunk_size_units>;  // ChunkMatrix[x][y] is correct indexing order
 
 	static std::ostream* out_stream = nullptr;
 
@@ -194,9 +195,9 @@ namespace engine {
 
 		ByteBuffer(uint8_t* data, size_t size, size_t offset) : data(data), size(size), offset(offset), owns_data(false), allow_resize(false) {}
 
-		ByteBuffer(size_t size) : data(new uint8_t[size]), size(size), offset(0), owns_data(true), allow_resize(false) {}
+		ByteBuffer(size_t size) : data(new uint8_t[size]), size(size), offset(0), owns_data(true), allow_resize(size == 0) {}
 
-		ByteBuffer(size_t size, size_t offset) : data(new uint8_t[size]), size(size), offset(offset), owns_data(true), allow_resize(false) {}
+		ByteBuffer(size_t size, size_t offset) : data(new uint8_t[size]), size(size), offset(offset), owns_data(true), allow_resize(size == 0) {}
 
 		ByteBuffer(size_t size, size_t offset, bool allow_resize) : data(new uint8_t[size]), size(size), offset(offset), owns_data(true), allow_resize(allow_resize) {}
 
@@ -208,7 +209,7 @@ namespace engine {
 
 		ByteBuffer& operator=(const ByteBuffer&) = delete;
 
-		void initialise(size_t size, size_t offset = 0, bool allow_resize = false) {
+		void initialise(size_t size, size_t offset, bool allow_resize) {
 			clear();
 			data = new uint8_t[size];
 			this->size = size;
@@ -217,12 +218,20 @@ namespace engine {
 			this->allow_resize = allow_resize;
 		}
 
+		void initialise(size_t size, size_t offset) {
+			initialise(size, offset, size == 0);
+		}
+
+		void initialise(size_t size) {
+			initialise(size, 0, size == 0);
+		}
+
 		void set_values(uint8_t* data, size_t size, size_t offset = 0, bool owns_data = false, bool allow_resize = false) {
 			this->data = data;
 			this->size = size;
 			this->offset = offset;
 			this->owns_data = owns_data;
-			this->allow_resize = allow_resize;
+			this->allow_resize = allow_resize or (owns_data and size == 0);
 		}
 
 		void copy_from(const ByteBuffer& other) {
@@ -285,7 +294,7 @@ namespace engine {
 				std::memcpy(data + offset, &value, sizeof(T));
 				offset += sizeof(T);
 			}
-			else if (std::is_same_v<std::remove_cvref_t<T>, std::string>) {
+			else if constexpr (std::is_same_v<std::remove_cvref_t<T>, std::string>) {
 				size_t string_size = value.size();
 				if (offset + sizeof(size_t) + string_size > size) {
 					resize(offset + sizeof(size_t) + string_size);
@@ -294,8 +303,12 @@ namespace engine {
 				std::memcpy(data + offset + sizeof(size_t), value.data(), string_size);
 				offset += sizeof(size_t) + string_size;
 			}
+			else if constexpr (std::is_same_v<std::remove_cvref_t<T>, ByteBuffer>) {
+				write(value.size);
+				write(value.data);
+			}
 			else {
-				static_assert(sizeof(T) == 0, "T must be trivially copyable");
+				static_assert(sizeof(T) == 0, "T must be trivially copyable or std::string or ByteBuffer");
 			}
 		}
 
@@ -308,7 +321,7 @@ namespace engine {
 				std::memcpy(&value, data + offset, sizeof(T));
 				offset += sizeof(T);
 			}
-			else if (std::is_same_v<std::remove_cvref_t<T>, std::string>) {
+			else if constexpr (std::is_same_v<std::remove_cvref_t<T>, std::string>) {
 				if (offset + sizeof(size_t) > size) {
 					panic("not enough bytes to read from byte buffer");
 				}
@@ -320,12 +333,31 @@ namespace engine {
 				value.assign(reinterpret_cast<const char*>(data + offset + sizeof(size_t)), string_size);
 				offset += sizeof(size_t) + string_size;
 			}
+			else if constexpr (std::is_same_v<std::remove_cvref_t<T>, ByteBuffer>) {
+				read(value.size);
+				read(value.data);
+				value.offset = 0;
+				value.owns_data = false;
+				value.allow_resize = false;
+			}
 			else {
-				static_assert(sizeof(T) == 0, "T must be trivially copyable");
+				static_assert(sizeof(T) == 0, "T must be trivially copyable or std::string or ByteBuffer");
 			}
 		}
 
-		void write_bytes(void* value, size_t value_size) {
+		void reference_data(ByteBuffer& buffer) {
+			write(buffer.data);
+		}
+
+		void dereference_data(ByteBuffer& buffer, size_t size, size_t offset = 0) {
+			read(buffer.data);
+			buffer.size = size;
+			buffer.offset = 0;
+			buffer.owns_data = false;
+			buffer.allow_resize = false;
+		}
+
+		void write_bytes(const void* value, size_t value_size) {
 			size_t required_size = offset + value_size;
 			if (required_size > size) {
 				resize(required_size);
@@ -614,270 +646,189 @@ namespace engine {
 		}
 	};
 
-	template <typename T>
 	struct BoundingBox {
 
-		Vector2<T> pos;
-		Vector2<T> half_size;
+		Vector2f low;
+		Vector2f high;
 
 		BoundingBox() {}
 
-		BoundingBox(Vector2<T> pos, Vector2<T> size) :pos(pos), half_size(size / 2) {}
+		BoundingBox(Vector2f low, Vector2f high) :low(low), high(high) {}
 
-		void set(Vector2<T> pos, Vector2<T> size) {
-			this->pos = pos;
-			this->half_size = size / 2;
+		BoundingBox(float low_x, float low_y, float high_x, float high_y) :low(Vector2f(low_x, low_y)), high(Vector2f(high_x, high_y)) {}
+
+		static BoundingBox make_centered(Vector2f center, Vector2f size) {
+			Vector2f half_size = size / 2;
+			return BoundingBox(center - half_size, center + half_size);
 		}
 
-		void set_corner(Vector2<T> pos, Vector2<T> size) {
-			this->half_size = size / 2;
-			this->pos = pos + half_size;
+		void move(Vector2f move_by) {
+			low += move_by;
+			high += move_by;
 		}
 
-		template <uint32_t side>
-		T get_side() { // 0 - top, 1-right, 2-bottom, 3-left, x+ is right, y+ is top
-			if constexpr (side==0) {
-				return pos.y + half_size.y;
-			}
-			else if constexpr (side == 1) {
-				return pos.x + half_size.x;
-			}
-			else if constexpr (side == 2) {
-				return pos.y - half_size.y;
-			}
-			else if constexpr (side == 3) {
-				return pos.x - half_size.x;
-			}
-			else {
-				static_assert(true, "unexpected mode for get side, only accept 0 to 3 modes");
-			}
+		void set(Vector2f low, Vector2f high) {
+			this->low = low;
+			this->high = high;
 		}
 
-		BoundingBox corner_cut(Vector2<T> size) {
-			BoundingBox result;
-			result.set_corner(corner(), size);
-			return result;
+		void set_centered(Vector2f center, Vector2f size) {
+			Vector2f half_size = size / 2;
+			this->low = center - half_size;
+			this->high = center + half_size;
 		}
 
-		Vector2<T> corner() {
-			return pos - half_size;
+		void set_center(Vector2f center) {
+			Vector2f size = this->size();
+			set_centered(center, size);
 		}
 
-		Vector2<T> size() {
-			return half_size * 2;
+		void set_size(Vector2f size) {
+			Vector2f center = this->center();
+			set_centered(center, size);
 		}
 
-		bool is_colliding(const BoundingBox<T> other) const {
-			return std::abs(pos.x - other.pos.x) <= (half_size.x + other.half_size.x) and std::abs(pos.y - other.pos.y) <= (half_size.y + other.half_size.y);
-		}
-
-		bool is_colliding(const Vector2<T> pos) const {
-			return std::abs(pos.x - this->pos.x) <= half_size.x and std::abs(pos.y - this->pos.y) <= half_size.y;
-		}
-
-	};
-
-	template <typename T>
-	struct CBoundingBox {
-
-		Vector2<T> pos;
-		Vector2<T> size;
-
-		CBoundingBox() {}
-
-		CBoundingBox(Vector2<T> pos, Vector2<T> size) :pos(pos), size(size) {}
-
-		void set(Vector2<T> pos, Vector2<T> size) {
-			this->pos = pos;
-			this->size = size;
-		}
-
-		template <uint32_t side>
-		void set_side(T value) { // 0 - top, 1-right, 2-bottom, 3-left, x+ is right, y+ is top
-			if constexpr (side == 0) {
+		template <Direction direction>
+		void set_side(float value) {
+			if constexpr (direction == UP) {
 				set_top(value);
 			}
-			else if constexpr (side == 1) {
+			else if constexpr (direction == RIGHT) {
 				set_right(value);
 			}
-			else if constexpr (side == 2) {
+			else if constexpr (direction == DOWN) {
 				set_bottom(value);
 			}
-			else if constexpr (side == 3) {
+			else if constexpr (direction == LEFT) {
 				set_left(value);
 			}
 			else {
-				static_assert(true, "unexpected mode for set side, only accept 0 to 3 modes");
+				static_assert(direction >= 0 and direction <= 3, "unexpected direction for set side, expected: 0 to 3");
 			}
 		}
 
-		void set_side(T value, uint32_t side) { // 0 - top, 1-right, 2-bottom, 3-left, x+ is right, y+ is top
-			if (side == 0) {
-				set_top(value);
-			}
-			else if (side == 1) {
-				set_right(value);
-			}
-			else if (side == 2) {
-				set_bottom(value);
-			}
-			else if (side == 3) {
-				set_left(value);
-			}
-			else {
-				panic("unexpected mode for set side, only accept 0 to 3 modes");
+		void set_side(float value, Direction direction) {
+			switch (direction) {
+			case UP: set_top(value); break;
+			case RIGHT: set_right(value); break;
+			case DOWN: set_bottom(value); break;
+			case LEFT: set_left(value); break;
+			default: panic("unexpected direction for set side, expected: 0 to 3, got: " + std::to_string(direction));
 			}
 		}
 
-		void set_top(T value) {
-			size.y = value - pos.y + static_cast<T>(1);
+		void set_top(float value) {
+			high.y = value;
 		}
 
-		void set_right(T value) {
-			size.x = value - pos.x + static_cast<T>(1);
+		void set_right(float value) {
+			high.x = value;
 		}
 
-		void set_bottom(T value) {
-			size.y += pos.y - value;
-			pos.y = value;
+		void set_bottom(float value) {
+			low.y = value;
 		}
 
-		void set_left(T value) {
-			size.x += pos.x - value;
-			pos.x = value;
+		void set_left(float value) {
+			low.x = value;
 		}
 
-		CBoundingBox corner_cut(Vector2<T> size) const {
-			return CBoundingBox(this->pos, size);
-		}
-
-		template <bool vertical>
-		bool fits_across(uint32_t offset) const {
-			if constexpr (vertical) {
-				return left() <= offset and offset <= right();
-			}
-			else {
-				return bottom() <= offset and offset <= top();
-			}
-		}
-
-		template <bool vertical, bool only_right_check>
-		bool fits_across(uint32_t offset) const {
-			if constexpr (vertical) {
-				if constexpr (only_right_check) {
-					return offset <= right();
-				}
-				else {
-					return offset >= left();
-				}
-			}
-			else {
-				if constexpr (only_right_check) {
-					return offset >= bottom();
-				}
-				else {
-					return offset <= top();
-				}
-			}
-		}
-
-		template <uint32_t side>
-		T get_side() const { // 0 - top, 1-right, 2-bottom, 3-left, x+ is right, y+ is top
-			if constexpr (side == 0) {
+		template <Direction direction>
+		float get_side() const {
+			if constexpr (direction == UP) {
 				return top();
 			}
-			else if constexpr (side == 1) {
+			else if constexpr (direction == RIGHT) {
 				return right();
 			}
-			else if constexpr (side == 2) {
+			else if constexpr (direction == DOWN) {
 				return bottom();
 			}
-			else if constexpr (side == 3) {
+			else if constexpr (direction == LEFT) {
 				return left();
 			}
 			else {
-				static_assert(true, "unexpected mode for get side, only accept 0 to 3 modes");
+				static_assert(direction >= 0 and direction <= 3, "unexpected direction for set side, expected: 0 to 3");
 			}
 		}
 
-		T get_side(uint32_t side) const { // 0 - top, 1-right, 2-bottom, 3-left, x+ is right, y+ is top
-			if (side == 0) {
-				return top();
-			}
-			else if (side == 1) {
-				return right();
-			}
-			else if (side == 2) {
-				return bottom();
-			}
-			else if (side == 3) {
-				return left();
-			}
-			else {
-				panic("unexpected mode for get side, only accept 0 to 3 modes");
+		float get_side(Direction direction) const {
+			switch (direction) {
+			case UP: return top();
+			case RIGHT: return right();
+			case DOWN: return bottom();
+			case LEFT: return left();
+			default: panic("unexpected direction for get side, expected: 0 to 3, got: " + std::to_string(direction));
 			}
 		}
 
-		T top() const {
-			return pos.y + size.y - static_cast<T>(1);
+		float top() const {
+			return high.y;
 		}
 
-		T right() const {
-			return pos.x + size.x - static_cast<T>(1);
+		float right() const {
+			return high.x;
 		}
 
-		T bottom() const {
-			return pos.y;
-		}
-		
-		T left() const {
-			return pos.x;
+		float bottom() const {
+			return low.y;
 		}
 
-		T height() const {
-			return size.y;
+		float left() const {
+			return low.x;
 		}
 
-		T width() const {
-			return size.x;
+		float height() const {
+			return high.y - low.y;
 		}
 
-		Vector2<T> bottom_left() {
-			return pos;
+		float width() const {
+			return high.x - low.x;
 		}
 
-		Vector2<T> bottom_right() {
-			return { pos.x + size.x - 1, pos.y };
+		Vector2f size() const {
+			return Vector2f(width(), height());
 		}
 
-		Vector2<T> top_left() {
-			return { pos.x, pos.y + size.y - 1 };
+		Vector2f center() const {
+			return low + size() / 2;
 		}
 
-		Vector2<T> top_right() {
-			return { pos.x + size.x - 1, pos.y + size.y - 1 };
+		Vector2f bottom_left() const {
+			return low;
 		}
 
-		bool is_colliding(const CBoundingBox<T> other) const {
+		Vector2f bottom_right() const {
+			return Vector2f(high.x, low.y);
+		}
+
+		Vector2f top_left() const {
+			return Vector2f(low.x, high.y);
+		}
+
+		Vector2f top_right() const {
+			return high;
+		}
+
+		bool is_colliding(const BoundingBox other) const {
 			return left() <= other.right() and right() >= other.left() and bottom() <= other.top() and top() >= other.bottom();
 		}
 
-		bool is_colliding(const Vector2<T> pos) const {
-			return left() <= pos.x <= right() and bottom() <= pos.y <= top();
+		bool is_colliding(const Vector2f pos) const {
+			return left() <= pos.x and pos.x <= right() and bottom() <= pos.y and pos.y <= top();
 		}
 
-		bool contains(const CBoundingBox& other) const {
+		bool contains(const BoundingBox other) const {
 			return other.left() >= left() and other.right() <= right() and other.bottom() >= bottom() and other.top() <= top();
 		}
 
 		std::string to_string() const {
-			return "CBBox(" + pos.to_string() + ", " + size.to_string() + ")";
+			return "BBox( low,high = " + low.to_string() + ", " + high.to_string() +"; center,size = " + center().to_string() + ", " + size().to_string() + ")";
 		}
 
 	};
 
-	template <typename T>
-	inline std::ostream& operator<<(std::ostream& os, const CBoundingBox<T> bbox) {
+	inline std::ostream& operator<<(std::ostream& os, const BoundingBox bbox) {
 		os << bbox.to_string();
 		return os;
 	}

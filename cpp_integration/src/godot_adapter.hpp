@@ -5,6 +5,9 @@
 
 using namespace godot;
 
+#define BIND_EVENT_BUS_CONSTANT(name) \
+    ClassDB::bind_integer_constant(get_class_static(), "", #name, engine::event_bus_ids::event_bus_ids::name)
+
 struct CppGodotAdapter : public Object {
     GDCLASS(CppGodotAdapter, Object)
 public:
@@ -21,6 +24,12 @@ public:
         ClassDB::bind_method(D_METHOD("send", "channel_id", "payload_buffer"), &CppGodotAdapter::send);
         ClassDB::bind_method(D_METHOD("get_payload_size"), &CppGodotAdapter::get_payload_size_godot);
         ClassDB::bind_method(D_METHOD("debug_get_id"), &CppGodotAdapter::debug_get_id);
+
+        BIND_EVENT_BUS_CONSTANT(RESERVED_ZERO_INDEX);
+        BIND_EVENT_BUS_CONSTANT(SET_PLAYER_STATE);
+        BIND_EVENT_BUS_CONSTANT(SET_PLAYER_SPEED); 
+        BIND_EVENT_BUS_CONSTANT(UPDATE_CAMERA_CHUNK);
+        BIND_EVENT_BUS_CONSTANT(MULTIPLY_CAMERA_ZOOM);
     }
 
     int64_t debug_get_id() {
@@ -28,29 +37,64 @@ public:
     }
 
     engine::EventBusId subscribe_event_bus(int64_t channel_id, Object* event_bus) {
-        return engine::EventBusManager::instance.subscribe_godot(channel_id, event_bus);
+        if (not valid_state) {
+            on_invalid_check();
+            return 0;
+        }
+
+        try {
+            return engine::EventBusManager::instance.subscribe_godot(channel_id, event_bus);
+        }
+        catch (const engine::CriticalExceptionStopGodot exception) {
+            on_exception_print(exception, "Critical Error on inilialise");
+            start_exit();
+        }
     }
     void unsubscribe_event_bus(int64_t channel_id, int64_t event_bus_id) {
-        engine::EventBusManager::instance.unsubscribe_godot(channel_id, event_bus_id);
+
+        if (not valid_state) {
+            on_invalid_check();
+            return;
+        }
+
+        try {
+            engine::EventBusManager::instance.unsubscribe_godot(channel_id, event_bus_id);
+        }
+        catch (const engine::CriticalExceptionStopGodot exception) {
+            on_exception_print(exception, "Critical Error on inilialise");
+            start_exit();
+        }
     }
     bool send(int64_t channel_id, GodotByteBuffer* payload_buffer) {
-        engine::ByteBuffer& byte_buffer = payload_buffer->byte_buffer;
-        if (byte_buffer.size != get_payload_size() or not byte_buffer.is_valid()) {
-            if (not byte_buffer.is_valid()) {
-                engine::panic("passing invalid buffer");
-            }
-            else {
-                engine::panic("passing byte buffer with incorrect size, buffer size: " + std::to_string(byte_buffer.size) + ", expected size: " + std::to_string(get_payload_size()));
-            }
+
+        if (not valid_state) {
+            on_invalid_check();
+            return false;
         }
-        return engine::EventBusManager::instance.send(channel_id, std::bit_cast<engine::EventPackage>(*reinterpret_cast<uint8_t(*)[get_payload_size()]>(byte_buffer.data)));
+
+        try {
+            engine::ByteBuffer& byte_buffer = payload_buffer->byte_buffer;
+            if (byte_buffer.size != get_payload_size() or not byte_buffer.is_valid()) {
+                if (not byte_buffer.is_valid()) {
+                    engine::panic("passing invalid buffer");
+                }
+                else {
+                    engine::panic("passing byte buffer with incorrect size, buffer size: " + std::to_string(byte_buffer.size) + ", expected size: " + std::to_string(get_payload_size()));
+                }
+            }
+            return engine::EventBusManager::instance.send(channel_id, std::bit_cast<engine::EventPackage>(*reinterpret_cast<uint8_t(*)[sizeof(engine::EventPackage)]>(byte_buffer.data)));
+        }
+        catch (const engine::CriticalExceptionStopGodot exception) {
+            on_exception_print(exception, "Critical Error on inilialise");
+            start_exit();
+        }
     }
 
     static constexpr int64_t get_payload_size() {
         return sizeof(engine::EventPackage);
     }
 
-    int64_t get_payload_size_godot() const {
+    constexpr int64_t get_payload_size_godot() const {
         return sizeof(engine::EventPackage);
     }
 
@@ -60,7 +104,7 @@ public:
 
     void start_exit() {
         valid_state = false;
-        left_frames = 2;
+        left_frames = 3;
     }
 
     void on_invalid_check() {
@@ -69,6 +113,7 @@ public:
         }
         else {
             left_frames -= 1;
+            engine::print("frames until shutting down:", left_frames);
         }
     }
 
@@ -99,7 +144,7 @@ public:
         }
     }
 
-    void process(engine::Seconds delta) {
+    void process(float delta) {
 
         if (not valid_state) {
             on_invalid_check();
@@ -107,7 +152,7 @@ public:
         }
 
         try {
-            engine::IntegrationCore::instance.process(delta);
+            engine::IntegrationCore::instance.process(engine::Time::seconds(delta));
             //engine::print(engine::GraphicsManager::instance.get_texture_id("imaginary path not existing anywhere"));
         }
         catch (const engine::CriticalExceptionStopGodot exception) {

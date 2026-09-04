@@ -37,7 +37,7 @@ namespace engine {
 
         TestEventBus* test_event_bus;
 
-        Seconds passed = 0;
+        Time passed = Time::seconds(0);
 
         void initialise(godot::Node2D* floor_layer_node, godot::Node2D* objects_layer_below_node, godot::Node2D* player_layer_node, godot::Node2D* objects_layer_above_node, godot::Node2D* roof_layer_node, godot::Node2D* player_basic_overlay, godot::Camera2D* world_camera) {
             engine::out_stream = new std::ostream(new GodotStreamBuffer());
@@ -48,18 +48,6 @@ namespace engine {
             MainEngine::instance.initialise();
 
             test_event_bus = new TestEventBus();
-
-            ByteBuffer buffer(10);
-
-            uint32_t value = 10;
-            print(value, "before writing");
-            buffer.write<uint32_t>(value);
-            print(value, "after writing");
-            buffer.offset = 0;
-            uint32_t result = 999;
-            print(result, "before reading");
-            buffer.read<uint32_t>(result);
-            print(result,"after reading");
 
             texture = Texture("res://Sprites/Entities/Storage/chest.png");
 
@@ -82,25 +70,13 @@ namespace engine {
             //multimesh2.delete_element(thing2);
         }
 
-        void process(Seconds delta) {
+        void process(Time delta) {
             MainEngine::instance.perform_process(delta);
             passed += delta;
 
-            multimesh.edit_element(element_id, { 0, 0 }, Vector2f(std::floor(passed * 10.0f + 0.0f), std::floor(passed * 10.0f + 0.0f) ), { 90,90 });
+            multimesh.edit_element(element_id, { 0, 0 }, Vector2f(std::floor(passed.value * 10.0f + 0.0f), std::floor(passed.value * 10.0f + 0.0f) ), { 90,90 });
 
-            multimesh2.edit_element(element_id2, { 0, 0 }, Vector2f( passed * 10.0f + 100.0f, passed * 10.0f + 100.0f ), { 100,100 });
-
-            //camera->set_position(godot::Vector2(passed * 10.0f, passed * 10.0f));
-
-            //camera->set_zoom(godot::Vector2(1.0f / (passed * 0.1f + 1.0f), 1.0f / (passed * 0.1f + 1.0f)));
-
-            auto res = to_local_coords({ passed * chunk_size_units / 2.0f,0.0f });
-
-            GraphicsManager::instance.set_camera_pos(res.first, res.second);
-
-            GraphicsManager::instance.set_camera_zoom(0.1f);
-
-            //GraphicsManager::instance.set_camera_zoom(1.0f / (passed * 0.1f + 1.0f));
+            multimesh2.edit_element(element_id2, { 0, 0 }, Vector2f( passed.value * 10.0f + 100.0f, passed.value * 10.0f + 100.0f ), { 100,100 });
         }
 
         static IntegrationCore instance;
